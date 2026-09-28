@@ -97,36 +97,14 @@ Item {
   }
 
   function playerOrder(player, fallback) {
-    var key = playerKey(player)
-    var value = key ? playerStartedAt[key] : undefined
-    return value === undefined ? fallback : value
+    return MediaModel.playerOrder(player, playerStartedAt, fallback)
   }
 
   function syncPlayingOrder() {
-    var next = {}
-    var alive = {}
-    var serial = playSerial
-
-    for (var i = 0; i < players.length; i++) {
-      var p = players[i]
-      var key = playerKey(p)
-      if (!key) continue
-
-      alive[key] = true
-      if (!p.isPlaying) continue
-
-      if (playerStartedAt[key] === undefined) {
-        serial += 1
-        next[key] = serial
-      } else {
-        next[key] = playerStartedAt[key]
-      }
-    }
-
-    if (preferredPlayerKey && !alive[preferredPlayerKey]) preferredPlayerKey = ""
-
-    playSerial = serial
-    playerStartedAt = next
+    var order = MediaModel.nextPlayingOrder(players, playerStartedAt, playSerial, preferredPlayerKey)
+    preferredPlayerKey = order.preferredKey
+    playSerial = order.serial
+    playerStartedAt = order.startedAt
   }
 
   function orderedSourcePlayers() {
@@ -165,71 +143,11 @@ Item {
   }
 
   function oldestPlayingPlayer(requirePlaybackStream) {
-    var oldest = null
-    var oldestOrder = 0
-    var playingProxy = null
-    var proxyOrder = 0
-
-    for (var i = 0; i < players.length; i++) {
-      var p = players[i]
-      if (!p) continue
-
-      var proxyPlayer = isProxyPlayer(p)
-      if (p.isPlaying) {
-        if (requirePlaybackStream && !playerHasPlaybackStream(p)) continue
-
-        var order = playerOrder(p, i + 1000)
-        if (!proxyPlayer && (!oldest || order < oldestOrder)) {
-          oldest = p
-          oldestOrder = order
-        } else if (proxyPlayer && (!playingProxy || order < proxyOrder)) {
-          playingProxy = p
-          proxyOrder = order
-        }
-      }
-    }
-
-    return oldest || playingProxy || null
+    return MediaModel.oldestPlayingPlayer(players, playbackStreams, playerStartedAt, requirePlaybackStream)
   }
 
   function selectActivePlayer() {
-    var preferred = null
-    var trackPlayer = null
-    var trackProxy = null
-    var streamPlayer = null
-    var streamProxy = null
-    var controllablePlayer = null
-    var controllableProxy = null
-    var identityPlayer = null
-    var identityProxy = null
-
-    for (var i = 0; i < players.length; i++) {
-      var p = players[i]
-      if (!p) continue
-
-      var proxy = isProxyPlayer(p)
-
-      if (preferredPlayerKey && playerKey(p) === preferredPlayerKey && hasMetadata(p)) preferred = p
-
-      if (playerHasPlaybackStream(p)) {
-        if (!proxy && !streamPlayer) streamPlayer = p
-        else if (proxy && !streamProxy) streamProxy = p
-      } else if (hasTrackMetadata(p)) {
-        if (!proxy && !trackPlayer) trackPlayer = p
-        else if (proxy && !trackProxy) trackProxy = p
-      } else if (playerCanControl(p)) {
-        if (!proxy && !controllablePlayer) controllablePlayer = p
-        else if (proxy && !controllableProxy) controllableProxy = p
-      } else if (hasMetadata(p)) {
-        if (!proxy && !identityPlayer) identityPlayer = p
-        else if (proxy && !identityProxy) identityProxy = p
-      }
-    }
-
-    if (preferred && preferred.isPlaying) return preferred
-    var streamCandidate = streamPlayer || streamProxy
-    var streamPreferred = preferred && playerHasPlaybackStream(preferred) ? preferred : null
-    return oldestPlayingPlayer(true) || oldestPlayingPlayer(false) || streamPreferred || streamCandidate || preferred || trackPlayer || trackProxy || controllablePlayer || controllableProxy || identityPlayer || identityProxy || null
+    return MediaModel.selectActivePlayer(players, playbackStreams, playerStartedAt, preferredPlayerKey)
   }
 
   function labelFor(player) {

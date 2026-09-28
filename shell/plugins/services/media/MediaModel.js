@@ -122,6 +122,117 @@ function osdMessage(player, fallback) {
 // What a volume key does to the output, by omarchy-audio-output-volume's rules:
 // raise and lower step 5 and clamp to 0..100 (so a boosted sink drops to 100
 // on raise), unmuting as they go; mute-toggle flips mute and keeps the volume.
+function playerOrder(player, startedAt, fallback) {
+  var key = playerKey(player)
+  var value = key && startedAt ? startedAt[key] : undefined
+  return value === undefined ? fallback : value
+}
+
+// Tracks the order players started in. A player that stops becomes the
+// preferred one, so play/pause resumes whatever was last heard instead of
+// whichever idle app happens to hold a paused audio stream.
+function nextPlayingOrder(players, startedAt, serial, preferredKey) {
+  var next = {}
+  var alive = {}
+  var stoppedKey = ""
+  var stoppedOrder = -1
+  var list = players || []
+
+  for (var i = 0; i < list.length; i++) {
+    var p = list[i]
+    var key = playerKey(p)
+    if (!key) continue
+
+    alive[key] = true
+    var started = startedAt ? startedAt[key] : undefined
+    if (p.isPlaying) {
+      if (started === undefined) {
+        serial += 1
+        next[key] = serial
+      } else {
+        next[key] = started
+      }
+    } else if (started !== undefined && started > stoppedOrder) {
+      stoppedKey = key
+      stoppedOrder = started
+    }
+  }
+
+  var preferred = stoppedKey || preferredKey || ""
+  if (preferred && !alive[preferred]) preferred = ""
+  return { startedAt: next, serial: serial, preferredKey: preferred }
+}
+
+function oldestPlayingPlayer(players, playbackStreams, startedAt, requirePlaybackStream) {
+  var oldest = null
+  var oldestOrder = 0
+  var playingProxy = null
+  var proxyOrder = 0
+  var list = players || []
+
+  for (var i = 0; i < list.length; i++) {
+    var p = list[i]
+    if (!p || !p.isPlaying) continue
+    if (requirePlaybackStream && !playerHasPlaybackStream(p, playbackStreams)) continue
+
+    var order = playerOrder(p, startedAt, i + 1000)
+    if (!isProxyPlayer(p) && (!oldest || order < oldestOrder)) {
+      oldest = p
+      oldestOrder = order
+    } else if (isProxyPlayer(p) && (!playingProxy || order < proxyOrder)) {
+      playingProxy = p
+      proxyOrder = order
+    }
+  }
+
+  return oldest || playingProxy || null
+}
+
+// With nothing playing, the preferred player (the one last used or last heard)
+// outranks a player that only holds an audio stream: Spotify keeps a corked
+// stream open while paused, while browsers tear theirs down.
+function selectActivePlayer(players, playbackStreams, startedAt, preferredKey) {
+  var preferred = null
+  var trackPlayer = null
+  var trackProxy = null
+  var streamPlayer = null
+  var streamProxy = null
+  var controllablePlayer = null
+  var controllableProxy = null
+  var identityPlayer = null
+  var identityProxy = null
+  var list = players || []
+
+  for (var i = 0; i < list.length; i++) {
+    var p = list[i]
+    if (!p) continue
+
+    var proxy = isProxyPlayer(p)
+
+    if (preferredKey && playerKey(p) === preferredKey && hasMetadata(p)) preferred = p
+
+    if (playerHasPlaybackStream(p, playbackStreams)) {
+      if (!proxy && !streamPlayer) streamPlayer = p
+      else if (proxy && !streamProxy) streamProxy = p
+    } else if (hasTrackMetadata(p)) {
+      if (!proxy && !trackPlayer) trackPlayer = p
+      else if (proxy && !trackProxy) trackProxy = p
+    } else if (playerCanControl(p)) {
+      if (!proxy && !controllablePlayer) controllablePlayer = p
+      else if (proxy && !controllableProxy) controllableProxy = p
+    } else if (hasMetadata(p)) {
+      if (!proxy && !identityPlayer) identityPlayer = p
+      else if (proxy && !identityProxy) identityProxy = p
+    }
+  }
+
+  if (preferred && preferred.isPlaying) return preferred
+  return oldestPlayingPlayer(list, playbackStreams, startedAt, true)
+    || oldestPlayingPlayer(list, playbackStreams, startedAt, false)
+    || preferred || streamPlayer || streamProxy
+    || trackPlayer || trackProxy || controllablePlayer || controllableProxy || identityPlayer || identityProxy || null
+}
+
 function volumeKeyStep(action, percent, muted) {
   if (action === "raise") return { percent: Math.min(percent + 5, 100), muted: false }
   if (action === "lower") return { percent: Math.max(percent - 5, 0), muted: false }
@@ -152,6 +263,10 @@ if (typeof module !== "undefined") {
     trackChanged: trackChanged,
     labelFor: labelFor,
     osdMessage: osdMessage,
+    playerOrder: playerOrder,
+    nextPlayingOrder: nextPlayingOrder,
+    oldestPlayingPlayer: oldestPlayingPlayer,
+    selectActivePlayer: selectActivePlayer,
     volumeKeyStep: volumeKeyStep,
     volumeOsdIcon: volumeOsdIcon
   }

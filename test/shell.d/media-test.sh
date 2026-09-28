@@ -54,6 +54,33 @@ assertEqual(media.volumeOsdIcon(48, false), 'volume-high', 'volume OSD shows the
 assertEqual(media.volumeOsdIcon(48, true), 'volume-muted', 'volume OSD shows muted when muted')
 assertEqual(media.volumeOsdIcon(0, false), 'volume-muted', 'volume OSD shows muted at zero')
 
+// Media keys resume the player last heard. Spotify keeps a corked stream open
+// while paused and browsers tear theirs down, so holding a stream must not
+// outrank the player that most recently stopped.
+const spotify = { dbusName: 'org.mpris.MediaPlayer2.spotify', identity: 'Spotify', trackTitle: 'Song', canPlay: true, isPlaying: false }
+const chromium = { dbusName: 'org.mpris.MediaPlayer2.chromium.instance1451', identity: 'Chromium', trackTitle: 'Video', canPlay: true, isPlaying: true }
+const spotifyStream = [{ isStream: true, type: 'Stream/Output/Audio', ready: true, properties: { 'application.name': 'Spotify' } }]
+let order = media.nextPlayingOrder([spotify, chromium], {}, 0, '')
+assertEqual(media.selectActivePlayer([spotify, chromium], spotifyStream, order.startedAt, order.preferredKey), chromium, 'media picks the playing player')
+chromium.isPlaying = false
+order = media.nextPlayingOrder([spotify, chromium], order.startedAt, order.serial, order.preferredKey)
+assertEqual(order.preferredKey, chromium.dbusName, 'a player that stops becomes the preferred one')
+assertEqual(media.selectActivePlayer([spotify, chromium], spotifyStream, order.startedAt, order.preferredKey), chromium, 'media keys resume the last player heard over an idle stream holder')
+order = media.nextPlayingOrder([spotify], order.startedAt, order.serial, order.preferredKey)
+assertEqual(order.preferredKey, '', 'a preferred player that goes away is forgotten')
+assertEqual(media.selectActivePlayer([spotify, chromium], spotifyStream, order.startedAt, order.preferredKey), spotify, 'with no preference the stream holder still wins')
+
+const first = { dbusName: 'org.mpris.MediaPlayer2.first', identity: 'First', isPlaying: true }
+const second = { dbusName: 'org.mpris.MediaPlayer2.second', identity: 'Second', isPlaying: false }
+order = media.nextPlayingOrder([first, second], {}, 0, '')
+second.isPlaying = true
+order = media.nextPlayingOrder([first, second], order.startedAt, order.serial, order.preferredKey)
+assertEqual(media.selectActivePlayer([second, first], [], order.startedAt, ''), first, 'the player that started first stays active')
+first.isPlaying = false
+second.isPlaying = false
+order = media.nextPlayingOrder([first, second], order.startedAt, order.serial, order.preferredKey)
+assertEqual(order.preferredKey, second.dbusName, 'when players stop together the one started last is preferred')
+
 // Only an ALSA sink is its own physical sink. Any other default sink, a DSP
 // chain or EasyEffects above all, needs omarchy-audio-output-sink's live
 // resolution on every press, so its keys fall back to the script.
