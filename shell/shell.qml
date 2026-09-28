@@ -243,7 +243,12 @@ ShellRoot {
   Loader {
     id: defaultBarLoader
 
+    // A configured replacement bar is only unavailable before the first scan
+    // because it has not been discovered yet. Building the stock bar in that
+    // window and destroying it once the replacement appears left its queued
+    // injectProps() calls running against a dead object, so wait for the scan.
     active: shell.activeBarId === shell.defaultBarId
+      && (shell.selectedBarId === shell.defaultBarId || shell.pluginRegistry.scannedOnce)
     sourceComponent: defaultBarComponent
     onLoaded: shell.configureBar(item, shell.barManifestFor(shell.defaultBarId))
     onActiveChanged: if (!active && shell.activeBarId !== shell.defaultBarId) shell.bar = null
