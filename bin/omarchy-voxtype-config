@@ -4,5 +4,11 @@
 
 set -e
 
-omarchy-launch-floating-terminal-with-presentation "voxtype configure"
-omarchy-restart-shell
+# The bar's Dictate indicator is always there, so a click on a machine without
+# Voxtype offers the install, as Install > AI > Dictation does.
+if omarchy-cmd-missing voxtype; then
+  omarchy-launch-floating-terminal-with-presentation omarchy-voxtype-install
+else
+  omarchy-launch-floating-terminal-with-presentation "voxtype configure"
+  omarchy-restart-shell
+fi
