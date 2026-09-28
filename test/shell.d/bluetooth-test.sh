@@ -17,7 +17,29 @@ assert(/IpcHandler[\s\S]*?function toggleBluetooth\(\) \{ root\.toggleBluetooth\
 assert(/manageIpc: false/.test(panelSource), 'bluetooth owns its IPC handler so it can extend the target methods')
 
 // Writing adapter.enabled sets BlueZ Powered, which does not survive a reboot.
-assert(/function toggleBluetooth\(\)[\s\S]*?execDetached\(\["omarchy-bluetooth-power", adapter\.enabled \? "off" : "on"\]\)/.test(panelSource), 'bluetooth toggles the radio through the rfkill soft block')
+assert(/function toggleBluetooth\(\)[\s\S]*?execDetached\(\["omarchy-bluetooth-power", poweredOn \? "off" : "on"\]\)/.test(panelSource), 'bluetooth toggles the radio through the rfkill soft block')
+
+// Some adapters leave D-Bus while blocked, nulling defaultAdapter. The rfkill
+// switch still says Bluetooth is only off, so the panel stays up and turns it on.
+const toggle = panelSource.match(/function toggleBluetooth\(\) \{[\s\S]*?\n {2}\}/)
+assert(toggle && !/if \(!adapter\) return/.test(toggle[0]), 'bluetooth can turn a blocked radio back on without an adapter')
+assert(/readonly property bool available: adapter !== null \|\| radioBlocked/.test(panelSource), 'bluetooth counts a blocked radio as available')
+assert(/\n {2}visible: available\n/.test(panelSource), 'bluetooth keeps its bar icon while the radio is blocked')
+assert(/command: \["rfkill", "event"\]/.test(panelSource), 'bluetooth follows rfkill switches as they change')
+
+let switches = {}
+switches = bluetooth.withRfkillEvent(switches, '2026-09-28 07:39:50,699250-07:00: idx 0 type 2 op 0 soft 0 hard 0')
+switches = bluetooth.withRfkillEvent(switches, '2026-09-28 07:39:50,699285-07:00: idx 1 type 1 op 0 soft 1 hard 0')
+assert(!bluetooth.anyBlocked(switches), 'a blocked Wi-Fi switch does not count as Bluetooth')
+switches = bluetooth.withRfkillEvent(switches, 'idx 4 type 2 op 0 soft 1 hard 0')
+switches = bluetooth.withRfkillEvent(switches, 'idx 0 type 2 op 1 soft 1 hard 0')
+assert(bluetooth.anyBlocked(switches), 'a platform switch keeps Bluetooth blocked after the adapter switch goes away')
+assertDeepEqual(switches, { 4: true }, 'removed switches are dropped')
+switches = bluetooth.withRfkillEvent(switches, 'idx 4 type 2 op 2 soft 0 hard 1')
+assert(bluetooth.anyBlocked(switches), 'a hard block counts as blocked')
+switches = bluetooth.withRfkillEvent(switches, 'idx 4 type 2 op 2 soft 0 hard 0')
+assert(!bluetooth.anyBlocked(switches), 'unblocking clears the blocked state')
+assertEqual(bluetooth.withRfkillEvent(switches, 'garbage'), switches, 'unparseable lines leave the switches alone')
 assert(!/adapter\.enabled = /.test(panelSource), 'bluetooth never writes the adapter power state directly')
 
 // Discovery is a BlueZ session that nothing ends at panel close: it persists

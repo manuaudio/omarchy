@@ -138,6 +138,22 @@ function withPendingAction(actions, address, action) {
   return next
 }
 
+// Folds one `rfkill event` line into a map of Bluetooth switch index to blocked.
+// Type 2 is Bluetooth, and op 1 is a switch going away with its device.
+function withRfkillEvent(switches, line) {
+  var match = /\bidx (\d+) type (\d+) op (\d+) soft (\d+) hard (\d+)/.exec(String(line || ""))
+  if (!match || match[2] !== "2") return switches
+  var next = cloneMap(switches)
+  if (match[3] === "1") delete next[match[1]]
+  else next[match[1]] = match[4] !== "0" || match[5] !== "0"
+  return next
+}
+
+function anyBlocked(switches) {
+  for (var key in switches || {}) if (switches[key]) return true
+  return false
+}
+
 function visibleSections(lists, discovering) {
   var sections = []
   if (lists && lists.connected && lists.connected.length > 0) sections.push("connected")
@@ -171,6 +187,8 @@ if (typeof module !== "undefined") {
     cloneMap: cloneMap,
     pendingAction: pendingAction,
     withPendingAction: withPendingAction,
+    withRfkillEvent: withRfkillEvent,
+    anyBlocked: anyBlocked,
     visibleSections: visibleSections,
     sectionDevices: sectionDevices
   }
