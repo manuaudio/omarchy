@@ -110,6 +110,26 @@ assertDeepEqual(julySunday.map(week => week.week), [27, 28, 29, 30, 31, 32], 'ca
 const januarySunday = calendar.monthGrid(2021, 0, 0, '')
 assertEqual(januarySunday[0].week, 53, 'calendar carries the previous ISO year into a straddling first row')
 
+// Chile starts DST at midnight on 2026-09-06, so that midnight does not exist.
+// QML's engine resolves it back into the 5th, which repeated the 5th and shifted
+// every later cell (#13599). V8 resolves it forward instead, so Node alone
+// cannot show the repeat: pin the noon anchor and check the grid under that zone.
+const modelSource = fs.readFileSync(root + '/shell/plugins/panels/clock/Model.js', 'utf8')
+assert(
+  modelSource.includes('var leading = (new Date(year, month, 1, 12).getDay() - start + 7) % 7') &&
+    modelSource.includes('var cursor = new Date(year, month, 1 - leading, 12)'),
+  'calendar steps its grid from noon so a midnight DST change cannot move it across a day'
+)
+const zone = process.env.TZ
+process.env.TZ = 'America/Santiago'
+const chileSeptember = calendar.monthGrid(2026, 8, 1, '').flatMap(week => week.days)
+process.env.TZ = zone
+assert(
+  chileSeptember.every((day, i) => i === 0 || Date.UTC(day.year, day.month, day.day) - Date.UTC(chileSeptember[i - 1].year, chileSeptember[i - 1].month, chileSeptember[i - 1].day) === 86400000) &&
+    chileSeptember.every((day, i) => day.weekday === (i + 1) % 7),
+  'calendar lists each day once under its weekday across a midnight DST change'
+)
+
 // ---- stepping
 assertDeepEqual(calendar.stepMonth(2026, 0, 1), { year: 2026, month: 1 }, 'calendar steps to the next month')
 assertDeepEqual(calendar.stepMonth(2026, 0, -1), { year: 2025, month: 11 }, 'calendar steps back across the new year')
