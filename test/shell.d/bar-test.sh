@@ -41,9 +41,11 @@ const shellSource = fs.readFileSync(root + '/shell/shell.qml', 'utf8')
 // stock bar still loads at once when it is the configured one.
 const registrySource = fs.readFileSync(root + '/shell/services/PluginRegistry.qml', 'utf8')
 assert(
-  /id: defaultBarLoader\s*(?:\/\/[^\n]*\s*)*active: shell\.activeBarId === shell\.defaultBarId\s*&& \(shell\.selectedBarId === shell\.defaultBarId \|\| shell\.pluginRegistry\.scannedOnce\)/.test(shellSource) &&
-    /scanning = false\s*scannedOnce = true\s*pluginsChanged\(\)\s*scanFinished\(\)/.test(registrySource),
-  'the stock bar waits for the first plugin scan when a replacement bar is configured'
+  /id: defaultBarLoader\s*(?:\/\/[^\n]*\s*)*active: shell\.activeBarId === shell\.defaultBarId && shell\.userConfigRead\s*&& \(shell\.selectedBarId === shell\.defaultBarId \|\| shell\.pluginRegistry\.scannedOnce\)/.test(shellSource) &&
+    /scanning = false\s*scannedOnce = true\s*pluginsChanged\(\)\s*scanFinished\(\)/.test(registrySource) &&
+    shellSource.includes('onLoaded: { shell.applyShellConfig(); shell.userConfigRead = true }') &&
+    shellSource.includes('onLoadFailed: function(error) { shell.applyShellConfig(); shell.userConfigRead = true }'),
+  'the stock bar waits for shell.json and the first plugin scan when a replacement bar is configured'
 )
 
 assert(/function toggleBarTransparency\(\): string \{[\s\S]*?shell\.bar\.toggleTransparency\(\)/.test(shellSource), 'shell exposes the bar transparency toggle over IPC')
