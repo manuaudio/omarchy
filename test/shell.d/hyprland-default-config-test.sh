@@ -131,7 +131,7 @@ o = { bind = function(keys, _, dispatcher) binds[keys] = dispatcher end }
 dofile(os.getenv("OMARCHY_PATH") .. "/default/hypr/bindings/clipboard.lua")
 
 for _, window in ipairs({
-  { name = "emacs", tags = { "native-super-clipboard*" } },
+  { name = "opted-in", tags = { "native-super-clipboard*" } },
   { name = "terminal", tags = { "terminal*" } },
   { name = "other", tags = {} },
 }) do
@@ -144,10 +144,10 @@ for _, window in ipairs({
 end
 LUA
 )
-expected_clipboard="emacs A SUPER+A
-emacs C SUPER+C
-emacs V SUPER+V
-emacs X SUPER+X
+expected_clipboard="opted-in A SUPER+A
+opted-in C SUPER+C
+opted-in V SUPER+V
+opted-in X SUPER+X
 terminal A CTRL+A
 terminal C CTRL SHIFT+C
 terminal V CTRL SHIFT+V
@@ -160,9 +160,12 @@ other X CTRL+X"
   fail "universal clipboard shortcuts pass the Super chord to apps that bind it" "$clipboard_output"
 pass "universal clipboard shortcuts pass the Super chord to apps that bind it"
 
-grep -F 'o.window("(emacs|Emacs)", { tag = "+native-super-clipboard" })' "$ROOT/default/hypr/apps/emacs.lua" >/dev/null ||
-  fail "Emacs keeps its own Super clipboard bindings"
-pass "Emacs keeps its own Super clipboard bindings"
+# Opt-in only: stock Emacs and Doom bind the Super chords only on macOS, so no
+# default rule may take the Ctrl translation away from an app.
+if grep -rF 'native-super-clipboard' "$ROOT/default/hypr/apps" >/dev/null; then
+  fail "no app is opted into native Super clipboard chords by default"
+fi
+pass "no app is opted into native Super clipboard chords by default"
 
 removed_home="$tmpdir/removed-home"
 mkdir -p "$removed_home/.local/state/omarchy"

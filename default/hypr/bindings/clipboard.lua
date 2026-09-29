@@ -15,9 +15,9 @@ local function send_shortcut_once(mods, key)
   end
 end
 
--- Lean on tags from default/hypr/apps so there's one definition of what counts
--- as a terminal, or as an app that binds the Super chords itself. Dynamic tags
--- carry a trailing "*".
+-- Lean on window tags so there's one definition of what counts as a terminal
+-- (default/hypr/apps/terminals.lua) or as an app that binds the Super chords
+-- itself (opted in by the user). Dynamic tags carry a trailing "*".
 local function active_window_has_tag(name)
   local window = hl.get_active_window()
   if not window then
@@ -33,8 +33,9 @@ local function active_window_has_tag(name)
   return false
 end
 
--- Apps tagged native-super-clipboard get the Super chord itself, since
--- translating it would take away a shortcut they already handle.
+-- Apps the user tags native-super-clipboard get the Super chord itself, since
+-- translating it would take away a shortcut they already handle. No app is
+-- tagged by default: stock Emacs and Doom bind these chords only on macOS.
 local function universal_clipboard_shortcut(default_mods, default_key, terminal_mods, terminal_key)
   return function()
     if active_window_has_tag("native-super-clipboard") then
