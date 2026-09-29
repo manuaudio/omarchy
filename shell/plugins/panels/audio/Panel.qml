@@ -57,6 +57,8 @@ Panel {
 
   property var sinkAvailability: ({})
   property bool sinkAvailabilityLoaded: false
+  property var sourceAvailability: ({})
+  property bool sourceAvailabilityLoaded: false
 
   // Identify true playback streams without reading node.properties here:
   // PwNode.properties is invalid until the node is bound, and reading it while
@@ -85,7 +87,9 @@ Panel {
   }
 
   readonly property var rawAudioSources: {
-    var list = candidateSources.slice()
+    var list = []
+    for (var i = 0; i < candidateSources.length; i++)
+      if (sourceAvailable(candidateSources[i])) list.push(candidateSources[i])
     if (source && list.indexOf(source) < 0) list.unshift(source)
     return list
   }
@@ -495,6 +499,18 @@ Panel {
     sinkAvailabilityLoaded = true
   }
 
+  // An input whose every port is unplugged, such as the mic on an empty combo
+  // jack, cannot become the default, so it is left out like unplugged outputs.
+  function sourceAvailable(node) {
+    if (!node || !node.name || !sourceAvailabilityLoaded) return true
+    return sourceAvailability[String(node.name)] !== false
+  }
+
+  function updateSourceAvailability(raw) {
+    sourceAvailability = Model.parseSinkAvailability(raw)
+    sourceAvailabilityLoaded = true
+  }
+
   function friendlyDeviceLabel(text) {
     return Model.friendlyDeviceLabel(text)
   }
@@ -593,6 +609,15 @@ Panel {
   }
 
   Process {
+    id: sourceAvailabilityProc
+    command: ["omarchy-audio-source-availability"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.updateSourceAvailability(text)
+    }
+  }
+
+  Process {
     id: volumeSinkProc
     command: ["omarchy-audio-output-sink"]
     stdout: StdioCollector {
@@ -606,7 +631,10 @@ Panel {
     running: root.opened
     repeat: true
     triggeredOnStart: true
-    onTriggered: if (!sinkAvailabilityProc.running) sinkAvailabilityProc.running = true
+    onTriggered: {
+      if (!sinkAvailabilityProc.running) sinkAvailabilityProc.running = true
+      if (!sourceAvailabilityProc.running) sourceAvailabilityProc.running = true
+    }
   }
 
   // Runs whether or not the panel is open: the bar shows and scrolls the output
