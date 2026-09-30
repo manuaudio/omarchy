@@ -109,6 +109,10 @@ assert(/readonly property var rawAudioSources: \{\s*var list = \[\]\s*for \(var 
   'the audio panel leaves unplugged inputs out of its list')
 assert(/if \(source && list\.indexOf\(source\) < 0\) list\.unshift\(source\)/.test(panel),
   'the audio panel keeps the current input listed even when unplugged')
+assert(/readonly property var audioSources: rawAudioSources\.length > 0 \|\| candidateSources\.length > 0\s*\? rawAudioSources : cachedAudioSources/.test(panel),
+  'the audio panel only falls back to cached inputs when PipeWire has no inputs at all')
+assert(/onRawAudioSourcesChanged: if \(rawAudioSources\.length > 0 \|\| candidateSources\.length > 0\) cachedAudioSources = rawAudioSources/.test(panel),
+  'the input cache follows the filtered list, including when every input is unplugged')
 assert(panel.includes('command: ["omarchy-audio-source-availability"]') && /sourceAvailabilityProc\.running = true/.test(panel),
   'the audio panel refreshes input availability while open')
 JS

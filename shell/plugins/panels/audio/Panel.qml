@@ -95,7 +95,10 @@ Panel {
   }
 
   readonly property var audioSinks: rawAudioSinks.length > 0 ? rawAudioSinks : cachedAudioSinks
-  readonly property var audioSources: rawAudioSources.length > 0 ? rawAudioSources : cachedAudioSources
+  // The cache bridges PipeWire briefly dropping its nodes. When nodes are
+  // present but every input is unplugged, the empty list is the real answer.
+  readonly property var audioSources: rawAudioSources.length > 0 || candidateSources.length > 0
+    ? rawAudioSources : cachedAudioSources
 
   readonly property var audioStreams: {
     var list = []
@@ -153,7 +156,7 @@ Panel {
   readonly property bool inputMuted: source && source.audio ? source.audio.muted : false
 
   onRawAudioSinksChanged: if (rawAudioSinks.length > 0) cachedAudioSinks = rawAudioSinks
-  onRawAudioSourcesChanged: if (rawAudioSources.length > 0) cachedAudioSources = rawAudioSources
+  onRawAudioSourcesChanged: if (rawAudioSources.length > 0 || candidateSources.length > 0) cachedAudioSources = rawAudioSources
 
   // Single cursor model shared by keyboard and mouse. Sections:
   //   "output"  — output slider + sink device list
