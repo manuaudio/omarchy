@@ -159,6 +159,17 @@ pass "Claude collector counts Anthropic usage from opencode v2 sessions"
   fail "Claude collector reads the model from opencode v2's nested model" "$result"
 pass "Claude collector reads the model from opencode v2's nested model"
 
+# A fresh v2 install has no legacy message table at all.
+python3 -c 'import sqlite3, sys; c = sqlite3.connect(sys.argv[1]); c.execute("DROP TABLE message"); c.commit()' \
+  "$OPENCODE_V2_HOME/.local/share/opencode/opencode.db"
+
+result=$(HOME="$OPENCODE_V2_HOME" XDG_CACHE_HOME="$OPENCODE_V2_HOME/.cache" XDG_DATA_HOME="$OPENCODE_V2_HOME/.local/share" \
+  "$ROOT/bin/omarchy-agent-usage-claude" --force)
+
+[[ $(jq -r '(.todayTotalTokens|tostring) + "/" + (.todaySessions|tostring)' <<<"$result") == "51055/1" ]] ||
+  fail "Claude collector counts a v2-only opencode database" "$result"
+pass "Claude collector counts a v2-only opencode database"
+
 # Pi and omp can both spend a Claude subscription without writing native
 # Claude Code transcripts. Their compatible JSONL sessions must be included.
 PI_HOME=$(mktemp -d)
