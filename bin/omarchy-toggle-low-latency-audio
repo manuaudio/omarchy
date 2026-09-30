@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# omarchy:summary=Toggle low-latency audio for recording and playing instruments
+# omarchy:args=[toggle|on|off|--status]
+# omarchy:examples=omarchy toggle low-latency-audio | omarchy toggle low-latency-audio on | omarchy toggle low-latency-audio --status
+
+# Forces PipeWire's graph to a small buffer, like the buffer size in macOS's
+# Audio MIDI Setup. It is a runtime setting: nothing restarts, playback carries
+# on, and a new session starts back on PipeWire's power-friendly default.
+QUANTUM=256
+
+forced_quantum() {
+  pw-metadata -n settings 0 clock.force-quantum 2>/dev/null | sed -n "s/.*key:'clock.force-quantum' value:'\([0-9]*\)'.*/\1/p"
+}
+
+enabled() {
+  local quantum
+  quantum=$(forced_quantum)
+  [[ -n $quantum ]] && ((quantum > 0))
+}
+
+set_quantum() {
+  pw-metadata -n settings 0 clock.force-quantum "$1" >/dev/null
+}
+
+case ${1:-toggle} in
+--status)
+  enabled
+  exit
+  ;;
+toggle)
+  if enabled; then
+    set_quantum 0
+  else
+    set_quantum "$QUANTUM"
+  fi
+  ;;
+on) set_quantum "$QUANTUM" ;;
+off) set_quantum 0 ;;
+*)
+  echo "Usage: omarchy-toggle-low-latency-audio [toggle|on|off|--status]" >&2
+  exit 1
+  ;;
+esac
+
+if enabled; then
+  # A small buffer only stays glitch-free when PipeWire runs with realtime
+  # priority, which needs RealtimeKit.
+  if omarchy-pkg-missing rtkit; then
+    omarchy-notification-send -g 󰋋 "Low-latency audio on" "Install rtkit for realtime priority, or expect crackles under load"
+  else
+    omarchy-notification-send -g 󰋋 "Low-latency audio on"
+  fi
+else
+  omarchy-notification-send -g 󰋋 "Low-latency audio off"
+fi
