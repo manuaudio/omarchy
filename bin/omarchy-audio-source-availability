@@ -5,8 +5,9 @@
 
 # A source whose every port is "not available" is an unplugged jack, such as
 # the headset mic on an empty combo jack. WirePlumber leaves it out of default
-# selection, so picking it in the panel would do nothing.
-pactl list sources 2>/dev/null | awk '
+# selection, so picking it in the panel would do nothing. pactl translates its
+# headings and availability, so read it in the C locale.
+LC_ALL=C pactl list sources 2>/dev/null | awk '
   function emit_source() {
     if (name == "") return
     print name "\t" ((port_count == 0 || available) ? 1 : 0)

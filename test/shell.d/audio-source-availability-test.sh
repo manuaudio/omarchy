@@ -68,6 +68,40 @@ output=$(PACTL_FIXTURE="$tmp/shared.txt" PATH="$tmp/bin:$PATH" "$ROOT/bin/omarch
 [[ $output == $'alsa_input.pci-0000_00_1f.3.analog-stereo\t1' ]] || fail "an input with any usable port stays available" "$output"
 pass "an input with any usable port stays available"
 
+# pactl translates its output, as in a German session. Only the C locale gives
+# the English headings the parser reads.
+cat >"$tmp/german.txt" <<'PACTL'
+Quelle #50
+	Status: SUSPENDED
+	Name: alsa_input.unplugged
+	Ports:
+		[In] Mic2: Stereo-Mikrofon (Typ: Mic, Priorität: 200, Verfügbarkeitsgruppe: Mic, nicht verfügbar)
+	Aktiver Port: [In] Mic2
+PACTL
+cat >"$tmp/german-c.txt" <<'PACTL'
+Source #50
+	State: SUSPENDED
+	Name: alsa_input.unplugged
+	Ports:
+		[In] Mic2: Stereo Microphone (type: Mic, priority: 200, availability group: Mic, not available)
+	Active Port: [In] Mic2
+PACTL
+mkdir -p "$tmp/localized"
+cat >"$tmp/localized/pactl" <<'STUB'
+#!/bin/bash
+if [[ ${LC_ALL:-} == C ]]; then
+  cat "$PACTL_FIXTURE_C"
+else
+  cat "$PACTL_FIXTURE"
+fi
+STUB
+chmod +x "$tmp/localized/pactl"
+
+output=$(LANG=de_DE.UTF-8 LC_ALL=de_DE.UTF-8 PACTL_FIXTURE="$tmp/german.txt" PACTL_FIXTURE_C="$tmp/german-c.txt" \
+  PATH="$tmp/localized:$PATH" "$ROOT/bin/omarchy-audio-source-availability")
+[[ $output == $'alsa_input.unplugged\t0' ]] || fail "an unplugged input is unavailable in a translated session" "$output"
+pass "an unplugged input is unavailable in a translated session"
+
 run_node_test <<'JS'
 const fs = require('fs')
 const panel = fs.readFileSync(root + '/shell/plugins/panels/audio/Panel.qml', 'utf8')
