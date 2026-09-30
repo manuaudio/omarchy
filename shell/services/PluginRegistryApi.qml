@@ -25,8 +25,10 @@ QtObject {
   function resolveEnabledId(id) {
     var requested = String(id || "")
     if (requested === pluginId) return pluginId
-    if (requested && !_warnedLookups[requested]) {
-      _warnedLookups[requested] = true
+    // Prefix the key so ids like "constructor" don't hit Object.prototype.
+    var key = "resolveEnabledId:" + requested
+    if (requested && !_warnedLookups[key]) {
+      _warnedLookups[key] = true
       console.warn("Plugin " + pluginId + " was denied resolveEnabledId(\"" + requested
         + "\"). Plugins can only resolve their own id; bar widgets use "
         + "shell.firstPartyServiceFor() to reach first-party services.")

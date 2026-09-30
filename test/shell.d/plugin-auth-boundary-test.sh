@@ -207,6 +207,7 @@ denials() {
 if [[ $(denials 'serviceFor("omarchy.idle")') != 1 ||
   $(denials 'resolveEnabledId("omarchy.idle")') != 1 ||
   $(denials 'firstPartyServiceFor("omarchy.polkit")') != 1 ||
+  $(denials 'resolveEnabledId("constructor")') != 1 ||
   $(denials 'serviceFor("example.safe")') != 0 ||
   $(denials 'resolveEnabledId("example.safe")') != 0 ]]; then
   sed -n '1,220p' "$log" >&2

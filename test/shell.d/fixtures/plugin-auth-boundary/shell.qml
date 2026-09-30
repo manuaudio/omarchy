@@ -72,6 +72,8 @@ ShellRoot {
       && registry.resolveEnabledId("omarchy.idle") === ""
       && registry.resolveEnabledId("omarchy.idle") === ""
       && registry.resolveEnabledId(caller) === caller
+      && api.firstPartyServiceFor("omarchy.polkit") === null
+      && registry.resolveEnabledId("constructor") === ""
     var result = {
       detached: api.parent === undefined || api.parent === null,
       ownService: own && own.marker === "own",
