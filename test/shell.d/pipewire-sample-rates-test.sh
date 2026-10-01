@@ -22,13 +22,14 @@ pass "PipeWire reads the shipped sample rates"
 migration=$(grep -rl "Let PipeWire follow the source's sample rate" "$ROOT/migrations" | head -n 1 || true)
 [[ -n $migration ]] || fail "the sample-rate migration exists"
 
-mkdir -p "$tmp/bin" "$tmp/home"
+mkdir -p "$tmp/bin" "$tmp/home" "$tmp/etc-pipewire"
 printf '#!/bin/bash\necho "$*" >>"%s/pw-metadata.log"\n' "$tmp" >"$tmp/bin/pw-metadata"
 chmod +x "$tmp/bin/pw-metadata"
 
 run_migration() {
   : >"$tmp/pw-metadata.log"
-  HOME="$tmp/home" OMARCHY_PATH="$ROOT" PATH="$tmp/bin:$ROOT/bin:$PATH" bash -euo pipefail "$migration" >/dev/null
+  HOME="$tmp/home" PIPEWIRE_CONFIG_DIR="$tmp/etc-pipewire" OMARCHY_PATH="$ROOT" PATH="$tmp/bin:$ROOT/bin:$PATH" \
+    bash -euo pipefail "$migration" >/dev/null
 }
 
 run_migration
@@ -54,3 +55,13 @@ run_migration
 [[ ! -e $tmp/home/.config/$conf && ! -s $tmp/pw-metadata.log ]] ||
   fail "the migration leaves rates set in another drop-in alone" "$(cat "$tmp/pw-metadata.log")"
 pass "the migration leaves rates set in another drop-in alone"
+
+# Rates set system-wide count too.
+rm -rf "${tmp:?}/home"
+mkdir -p "$tmp/home" "$tmp/etc-pipewire/pipewire.conf.d"
+printf 'context.properties = {\n  default.clock.allowed-rates = [ 48000 ]\n}\n' \
+  >"$tmp/etc-pipewire/pipewire.conf.d/50-site.conf"
+run_migration
+[[ ! -e $tmp/home/.config/$conf && ! -s $tmp/pw-metadata.log ]] ||
+  fail "the migration leaves system-wide rates alone" "$(cat "$tmp/pw-metadata.log")"
+pass "the migration leaves system-wide rates alone"

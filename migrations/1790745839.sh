@@ -3,10 +3,13 @@ echo "Let PipeWire follow the source's sample rate"
 conf="pipewire/pipewire.conf.d/10-sample-rates.conf"
 
 # Leave anyone who already chose their rates alone, in any PipeWire config.
+# PIPEWIRE_CONFIG_DIR is PipeWire's own override for /etc/pipewire.
 rates_configured() {
+  local system="${PIPEWIRE_CONFIG_DIR:-/etc/pipewire}"
+
   grep -qsE '^[[:space:]]*default\.clock\.allowed-rates' \
     "$HOME/.config/pipewire/pipewire.conf" "$HOME"/.config/pipewire/pipewire.conf.d/*.conf \
-    /etc/pipewire/pipewire.conf /etc/pipewire/pipewire.conf.d/*.conf
+    "$system/pipewire.conf" "$system"/pipewire.conf.d/*.conf
 }
 
 if [[ ! -f "$HOME/.config/$conf" ]] && ! rates_configured; then
