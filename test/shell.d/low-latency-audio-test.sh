@@ -13,6 +13,7 @@ mkdir -p "$tmp/bin"
 cat >"$tmp/bin/pw-metadata" <<SH
 #!/bin/bash
 state="$tmp/quantum"
+[[ \${PIPEWIRE_DOWN:-0} == 1 ]] && exit 1
 if (( \$# == 5 )); then
   echo "\$5" >"\$state"
 elif [[ -f \$state ]]; then
@@ -21,7 +22,9 @@ elif [[ -f \$state ]]; then
 fi
 SH
 printf '#!/bin/bash\necho "$*" >>"%s/notifications"\n' "$tmp" >"$tmp/bin/omarchy-notification-send"
-printf '#!/bin/bash\n[[ ${RTKIT_MISSING:-0} == 1 ]]\n' >"$tmp/bin/omarchy-pkg-missing"
+# PipeWire's data loop shows FF (FIFO) when it has realtime priority, TS otherwise.
+printf '#!/bin/bash\necho 4242\n' >"$tmp/bin/pgrep"
+printf '#!/bin/bash\necho TS\necho "${PIPEWIRE_CLASS:-FF}"\n' >"$tmp/bin/ps"
 chmod +x "$tmp/bin/"*
 
 toggle() {
@@ -49,12 +52,30 @@ toggle off
 pass "on and off set the state explicitly"
 
 : >"$tmp/notifications"
-RTKIT_MISSING=1 toggle on
-grep -q "Install rtkit" "$tmp/notifications" || fail "turning on without rtkit explains the missing realtime priority" "$(cat "$tmp/notifications")"
+PIPEWIRE_CLASS=TS toggle on
+grep -q "realtime priority" "$tmp/notifications" || fail "turning on without realtime priority says so" "$(cat "$tmp/notifications")"
 : >"$tmp/notifications"
-RTKIT_MISSING=0 toggle on
-! grep -q "rtkit" "$tmp/notifications" || fail "turning on with rtkit shows no rtkit hint" "$(cat "$tmp/notifications")"
-pass "the rtkit hint appears only when rtkit is missing"
+PIPEWIRE_CLASS=FF toggle on
+! grep -q "realtime" "$tmp/notifications" || fail "turning on with realtime priority shows no hint" "$(cat "$tmp/notifications")"
+pass "the realtime hint follows PipeWire's actual scheduling"
+
+toggle off
+: >"$tmp/notifications"
+if PIPEWIRE_DOWN=1 toggle on 2>/dev/null; then
+  fail "a failed PipeWire write is reported as a failure"
+fi
+[[ ! -s $tmp/notifications ]] || fail "a failed PipeWire write sends no notification" "$(cat "$tmp/notifications")"
+pass "a failed PipeWire write fails without a notification"
+
+echo 128 >"$tmp/quantum"
+! toggle --status || fail "another forced quantum is not reported as low-latency audio"
+if toggle 2>/dev/null || toggle off 2>/dev/null; then
+  fail "toggle and off refuse to replace another forced quantum"
+fi
+[[ $(cat "$tmp/quantum") == 128 ]] || fail "another forced quantum is left alone" "$(cat "$tmp/quantum")"
+toggle on
+[[ $(cat "$tmp/quantum") == 256 ]] || fail "on still sets low-latency audio explicitly"
+pass "a buffer forced to another size is left alone unless on is asked for"
 
 if toggle sideways 2>/dev/null; then
   fail "an unknown argument is rejected"

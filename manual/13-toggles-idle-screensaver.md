@@ -27,7 +27,7 @@ The touchpad, touchscreen, and hybrid GPU switches live under _Trigger > Hardwar
 
 The Toggle menu also carries a few things that aren't `omarchy toggle` commands but behave the same: battery percentage in the bar, workspace layout (`Super + L`), window gaps (`Super + Shift + Backspace`), and the 1-window square aspect (`Super + Ctrl + Backspace`).
 
-Low-latency audio drops PipeWire's buffer to 256 samples, about 5 ms, for recording or playing software instruments, the way you'd lower the buffer size in Audio MIDI Setup on a Mac. It's a runtime switch: playback carries on, and the next session starts back on the power-friendly default. PipeWire needs `rtkit` for realtime priority, and without it a buffer this small can crackle under load, which the toggle's notification points out.
+Low-latency audio drops PipeWire's buffer to 256 samples, about 5 ms, for recording or playing software instruments, the way you'd lower the buffer size in Audio MIDI Setup on a Mac. It's a runtime switch: playback carries on, and the next session starts back on the power-friendly default. PipeWire needs `rtkit` for realtime priority, and without it a buffer this small can crackle under load, which the toggle's notification points out. If you've already forced a different buffer size yourself, the toggle leaves it alone.
 
 Most of these are just a flag file under `~/.local/state/omarchy/toggles/`. If you want to branch on one in a script, `omarchy-toggle-enabled` gives you an exit code instead of making you go looking:
 
