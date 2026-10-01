@@ -22,9 +22,10 @@ elif [[ -f \$state ]]; then
 fi
 SH
 printf '#!/bin/bash\necho "$*" >>"%s/notifications"\n' "$tmp" >"$tmp/bin/omarchy-notification-send"
-# PipeWire's data loop shows FF (FIFO) when it has realtime priority, TS otherwise.
-printf '#!/bin/bash\necho 4242\n' >"$tmp/bin/pgrep"
-printf '#!/bin/bash\necho TS\necho "${PIPEWIRE_CLASS:-FF}"\n' >"$tmp/bin/ps"
+# PipeWire's data loop shows FF (FIFO) when it has realtime priority, TS
+# otherwise. pgrep must ask for this user's PipeWire.
+printf '#!/bin/bash\n[[ " $* " == *" -u %s "* ]] && echo 4242\n' "$UID" >"$tmp/bin/pgrep"
+printf '#!/bin/bash\necho " TS pipewire"\necho " ${OTHER_CLASS:-TS} module-rt"\necho " ${PIPEWIRE_CLASS:-FF} data-loop.0"\n' >"$tmp/bin/ps"
 chmod +x "$tmp/bin/"*
 
 toggle() {
@@ -57,7 +58,10 @@ grep -q "realtime priority" "$tmp/notifications" || fail "turning on without rea
 : >"$tmp/notifications"
 PIPEWIRE_CLASS=FF toggle on
 ! grep -q "realtime" "$tmp/notifications" || fail "turning on with realtime priority shows no hint" "$(cat "$tmp/notifications")"
-pass "the realtime hint follows PipeWire's actual scheduling"
+: >"$tmp/notifications"
+PIPEWIRE_CLASS=TS OTHER_CLASS=FF toggle on
+grep -q "realtime priority" "$tmp/notifications" || fail "only the data loop's scheduling counts" "$(cat "$tmp/notifications")"
+pass "the realtime hint follows the data loop's actual scheduling"
 
 toggle off
 : >"$tmp/notifications"

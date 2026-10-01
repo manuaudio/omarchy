@@ -34,12 +34,13 @@ other_quantum() {
   fi
 }
 
-# A small buffer only stays glitch-free when PipeWire's data loop runs with
-# realtime priority (FIFO or round-robin scheduling), which RealtimeKit grants.
+# A small buffer only stays glitch-free when this user's PipeWire runs its
+# data loop, the thread that processes audio, with realtime priority (FIFO or
+# round-robin scheduling), which RealtimeKit grants.
 realtime() {
   local pid
-  pid=$(pgrep -xo pipewire) || return 1
-  ps -L -o cls= -p "$pid" | grep -qE 'FF|RR'
+  pid=$(pgrep -xo -u "$UID" pipewire) || return 1
+  ps -L -o cls=,comm= -p "$pid" | grep -qE '^ *(FF|RR) +data-loop'
 }
 
 case ${1:-toggle} in
