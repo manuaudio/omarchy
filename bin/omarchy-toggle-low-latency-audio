@@ -10,15 +10,19 @@
 QUANTUM=256
 
 forced_quantum() {
-  pw-metadata -n settings 0 clock.force-quantum 2>/dev/null | sed -n "s/.*key:'clock.force-quantum' value:'\([0-9]*\)'.*/\1/p"
+  local output
+  output=$(pw-metadata -n settings 0 clock.force-quantum 2>/dev/null) || return 1
+  sed -n "s/.*key:'clock.force-quantum' value:'\([0-9]*\)'.*/\1/p" <<<"$output"
 }
 
 enabled() {
-  [[ $(forced_quantum) == "$QUANTUM" ]]
+  [[ $quantum == "$QUANTUM" ]]
 }
 
 set_quantum() {
-  if ! pw-metadata -n settings 0 clock.force-quantum "$1" >/dev/null 2>&1; then
+  if pw-metadata -n settings 0 clock.force-quantum "$1" >/dev/null 2>&1; then
+    quantum=$1
+  else
     echo "Could not change PipeWire's buffer size. Is PipeWire running?" >&2
     exit 1
   fi
@@ -26,8 +30,6 @@ set_quantum() {
 
 # A buffer someone forced to another size is theirs; only ours is switched off.
 other_quantum() {
-  local quantum
-  quantum=$(forced_quantum)
   if [[ -n $quantum && $quantum != 0 && $quantum != "$QUANTUM" ]]; then
     echo "PipeWire's buffer is already forced to $quantum samples; leaving it alone." >&2
     exit 1
@@ -42,6 +44,16 @@ realtime() {
   pid=$(pgrep -xo -u "$UID" pipewire) || return 1
   ps -L -o cls=,comm= -p "$pid" | grep -qE '^ *(FF|RR) +data-loop'
 }
+
+# A setting that can't be read is never reported as off: nothing was checked.
+if ! quantum=$(forced_quantum); then
+  if [[ ${1:-} == "--status" ]]; then
+    exit 1
+  else
+    echo "Could not read PipeWire's buffer size. Is PipeWire running?" >&2
+    exit 1
+  fi
+fi
 
 case ${1:-toggle} in
 --status)

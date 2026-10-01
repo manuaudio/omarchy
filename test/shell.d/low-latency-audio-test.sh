@@ -69,7 +69,16 @@ if PIPEWIRE_DOWN=1 toggle on 2>/dev/null; then
   fail "a failed PipeWire write is reported as a failure"
 fi
 [[ ! -s $tmp/notifications ]] || fail "a failed PipeWire write sends no notification" "$(cat "$tmp/notifications")"
-pass "a failed PipeWire write fails without a notification"
+echo 256 >"$tmp/quantum"
+: >"$tmp/notifications"
+if PIPEWIRE_DOWN=1 toggle 2>/dev/null || PIPEWIRE_DOWN=1 toggle off 2>/dev/null; then
+  fail "a failed PipeWire read is reported as a failure"
+fi
+[[ ! -s $tmp/notifications && $(cat "$tmp/quantum") == 256 ]] ||
+  fail "a failed PipeWire read neither notifies nor changes the setting" "$(cat "$tmp/notifications")"
+! PIPEWIRE_DOWN=1 toggle --status || fail "status is not on when PipeWire can't be read"
+echo 0 >"$tmp/quantum"
+pass "a failed PipeWire read or write fails without a notification"
 
 echo 128 >"$tmp/quantum"
 ! toggle --status || fail "another forced quantum is not reported as low-latency audio"
