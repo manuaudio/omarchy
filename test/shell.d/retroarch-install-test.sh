@@ -18,6 +18,9 @@ cat >"$tmp/bin/vulkaninfo" <<'SH'
 [[ -n ${VULKAN_DEVICE_TYPE:-} ]] || exit 1
 echo "GPU0:"
 echo "	deviceType         = PHYSICAL_DEVICE_TYPE_$VULKAN_DEVICE_TYPE"
+for ((line = 0; line < ${VULKAN_SUMMARY_TAIL:-0}; line++)); do
+  echo "	driverInfo         = Mesa 26.2.2"
+done
 SH
 chmod +x "$tmp/bin/"*
 
@@ -66,6 +69,10 @@ grep -qx "vulkan-tools" "$tmp/pkg-add.log" || fail "the migration installs vulka
 pass "the migration switches a Vulkan config to glcore when no GPU provides Vulkan"
 
 [[ $(migrate vulkan INTEGRATED_GPU) == "vulkan" ]] || fail "the migration keeps Vulkan on a GPU that provides it"
+# A long summary after the device line: a grep that quits at the first match
+# would leave vulkaninfo to die of SIGPIPE, which pipefail reads as no GPU.
+[[ $(VULKAN_SUMMARY_TAIL=200000 migrate vulkan DISCRETE_GPU) == "vulkan" ]] ||
+  fail "the migration keeps Vulkan when vulkaninfo prints more after the device"
 pass "the migration keeps Vulkan on a GPU that provides it"
 
 [[ $(migrate gl "") == "gl" && ! -e $tmp/pkg-add.log ]] || fail "the migration leaves a user's own driver alone"
