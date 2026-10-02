@@ -42,3 +42,32 @@ pass "RetroArch skips a CPU-only Vulkan device"
 
 [[ $(video_driver_for "") == "glcore" ]] || fail "RetroArch falls back to glcore without a Vulkan device"
 pass "RetroArch falls back to glcore without a Vulkan device"
+
+# Existing installs: the migration moves a config the old installer left on
+# Vulkan to glcore when no GPU enumerates, and touches nothing else.
+migration=$(grep -rl "Switch RetroArch to the glcore video driver" "$ROOT/migrations" | head -n 1 || true)
+[[ -n $migration ]] || fail "the RetroArch video driver migration exists"
+printf '#!/bin/bash\necho "$*" >>"%s/pkg-add.log"\n' "$tmp" >"$tmp/bin/omarchy-pkg-add"
+
+migrate() {
+  local driver=$1 type=$2 home="$tmp/migrate-home"
+
+  rm -rf "$home" "$tmp/pkg-add.log"
+  if [[ -n $driver ]]; then
+    mkdir -p "$home/.config/retroarch"
+    printf 'menu_driver = "xmb"\nvideo_driver = "%s"\n' "$driver" >"$home/.config/retroarch/retroarch.cfg"
+  fi
+  HOME="$home" VULKAN_DEVICE_TYPE=$type PATH="$tmp/bin:$PATH" bash -euo pipefail "$migration" >/dev/null
+  sed -n 's/^video_driver = "\(.*\)"$/\1/p' "$home/.config/retroarch/retroarch.cfg" 2>/dev/null || true
+}
+
+[[ $(migrate vulkan "") == "glcore" ]] || fail "the migration switches a Vulkan config to glcore without a GPU device"
+grep -qx "vulkan-tools" "$tmp/pkg-add.log" || fail "the migration installs vulkan-tools for its device check"
+pass "the migration switches a Vulkan config to glcore when no GPU provides Vulkan"
+
+[[ $(migrate vulkan INTEGRATED_GPU) == "vulkan" ]] || fail "the migration keeps Vulkan on a GPU that provides it"
+pass "the migration keeps Vulkan on a GPU that provides it"
+
+[[ $(migrate gl "") == "gl" && ! -e $tmp/pkg-add.log ]] || fail "the migration leaves a user's own driver alone"
+[[ -z $(migrate "" "") && ! -e $tmp/pkg-add.log ]] || fail "the migration skips machines without RetroArch"
+pass "the migration leaves other drivers and machines without RetroArch alone"
