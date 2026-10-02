@@ -30,7 +30,7 @@ video_driver_for() {
   sed -n 's/^video_driver = "\(.*\)"$/\1/p' "$home/.config/retroarch/retroarch.cfg"
 }
 
-for type in INTEGRATED_GPU DISCRETE_GPU; do
+for type in INTEGRATED_GPU DISCRETE_GPU VIRTUAL_GPU; do
   [[ $(video_driver_for "$type") == "vulkan" ]] || fail "RetroArch uses Vulkan on a $type"
 done
 pass "RetroArch uses Vulkan when a GPU provides a Vulkan device"
