@@ -277,6 +277,25 @@ for cores in 1 2 8; do
   pass "lazy image menu workers finish every queued thumbnail after the caller exits"
 done
 
+# A lazy row stands in with the image itself until its thumbnail exists, and
+# such rows must never be cached. The comparison has to be literal: a name
+# with glob characters does not match itself as a pattern.
+lazy_images="$tmp/lazy-glob-images"
+lazy_state="$tmp/lazy-state-glob"
+cores=glob
+mkdir -p "$lazy_images" "$lazy_state"
+printf 'image' >"$lazy_images/x[1].jpg"
+printf '0\n' >"$lazy_state/active"
+printf '0\n' >"$lazy_state/peak"
+: >"$lazy_state/gate"
+lazy_rows
+[[ $rows == "$lazy_images/x[1].jpg"$'\t'"$lazy_images/x[1].jpg" ]] ||
+  fail "lazy image menu stands in a glob-named image for its own thumbnail" "$rows"
+glob_cache_key=$(printf '%s' "$lazy_images" | md5sum | cut -d ' ' -f 1)
+[[ ! -e $tmp/lazy-cache-glob/omarchy/image-selector/$glob_cache_key.rows ]] ||
+  fail "lazy image menu does not cache a placeholder row for a glob-named image"
+pass "lazy image menu does not cache a placeholder row for a glob-named image"
+
 # Exercise the same cleanup handler on both successful and failing exits,
 # with a detached, gated fixture still running when the EXIT trap fires.
 run_node_test <<'JS'
