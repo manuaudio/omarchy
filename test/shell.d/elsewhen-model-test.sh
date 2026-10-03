@@ -83,8 +83,12 @@ assertDeepEqual([undefined, null, NaN].map(M.utcOffsetLabel), ['', '', ''], 'els
 
 assertEqual(M.relativeOffsetLabel(540, 0), '+9h', 'elsewhen labels a zone ahead')
 assertEqual(M.relativeOffsetLabel(-300, -120), '-3h', 'elsewhen labels a zone behind')
-assertEqual(M.relativeOffsetLabel(345, 0), '+5.8h', 'elsewhen rounds quarter zones to a tenth')
+assertEqual(M.relativeOffsetLabel(345, 0), '+5.75h', 'elsewhen labels Kathmandu from London')
+assertEqual(M.relativeOffsetLabel(-45, 0), '-0.75h', 'elsewhen labels a quarter-hour zone behind')
 assertEqual(M.relativeOffsetLabel(330, 0), '+5.5h', 'elsewhen keeps half-hour zones')
+assertEqual(M.relativeOffsetLabel(60, 0), '+1h', 'elsewhen labels a whole hour without decimals')
+assertEqual(M.relativeOffsetLabel(525, 480), '+0.75h', 'elsewhen labels Eucla from Perth')
+assertEqual(M.relativeOffsetLabel(345, 330), '+0.25h', 'elsewhen labels Kathmandu from Delhi')
 assertEqual(M.relativeOffsetLabel(570, 600), '-0.5h', 'elsewhen labels Adelaide from Sydney')
 assertEqual(M.relativeOffsetLabel(-480, -480), '', 'elsewhen says nothing on your own offset')
 

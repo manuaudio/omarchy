@@ -206,12 +206,13 @@ function inDaylight(progress) {
   return progress >= daylightStart() && progress < daylightEnd()
 }
 
-// "+9h" or "-3.5h" from the viewer's clock; "" on the viewer's own offset.
+// "+9h", "-3.5h" or "+5.75h" from the viewer's clock; "" on the viewer's own offset.
+// Rounded to the quarter hour so three-quarter-hour zones like Kathmandu stay exact.
 function relativeOffsetLabel(zoneOffsetMinutes, localOffsetMinutes) {
   var diff = Number(zoneOffsetMinutes) - Number(localOffsetMinutes)
   if (diff === 0) return ""
   var hours = diff / 60
-  var text = (Math.round(hours * 10) / 10).toString()
+  var text = (Math.round(hours * 4) / 4).toString()
   return (diff > 0 ? "+" : "") + text + "h"
 }
 
