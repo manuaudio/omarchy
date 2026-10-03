@@ -410,3 +410,56 @@ pass "without a runtime dir the webcam anchors to the recorded region"
 mode=$(stat -c '%a' "$state_home/omarchy" 2>/dev/null || stat -f '%Lp' "$state_home/omarchy")
 [[ $mode == "700" ]] || fail "fallback directory is private even when it already existed" "mode: $mode"
 pass "fallback directory is private even when it already existed"
+
+# The webcam overlay is up before gpu-screen-recorder starts. When the recorder
+# dies on launch -- the EGL DMA-BUF import failures the script warns about --
+# the start has to fail so the overlay and region file are cleaned up, and the
+# user has to hear about it instead of facing a camera window and no recording.
+failing_bin="$tmp_dir/failing-bin"
+mkdir -p "$failing_bin" "$tmp_dir/home-failing"
+export OMARCHY_TEST_PKILL_ARGS="$tmp_dir/pkill-args"
+
+cat >"$failing_bin/gpu-screen-recorder" <<'SH'
+#!/bin/bash
+exit 1
+SH
+
+cat >"$failing_bin/mpv" <<'SH'
+#!/bin/bash
+exit 0
+SH
+
+cat >"$failing_bin/pkill" <<'SH'
+#!/bin/bash
+printf '%s\n' "$*" >>"$OMARCHY_TEST_PKILL_ARGS"
+SH
+
+cat >"$failing_bin/omarchy-capture-region" <<'SH'
+#!/bin/bash
+printf '100,100 800x600\n'
+SH
+
+chmod +x "$failing_bin"/*
+
+rm -f "$OMARCHY_TEST_NOTIFICATION_ARGS" "$XDG_RUNTIME_DIR/omarchy-screenrecord-filename" "$XDG_RUNTIME_DIR/omarchy-screenrecord-region"
+: >"$OMARCHY_TEST_PKILL_ARGS"
+
+PATH="$failing_bin:$PATH" HOME="$tmp_dir/home-failing" OMARCHY_SCREENRECORD_DIR="$recording_dir" \
+  "$ROOT/bin/omarchy-capture-screenrecording" --with-webcam --webcam-device=/dev/video42 >/dev/null 2>&1 || true
+
+[[ -s $OMARCHY_TEST_NOTIFICATION_ARGS ]] && grep -Fx 'Screen recording error' "$OMARCHY_TEST_NOTIFICATION_ARGS" >/dev/null ||
+  fail "a recorder that dies on start reports an error" "$(cat "$OMARCHY_TEST_NOTIFICATION_ARGS" 2>/dev/null)"
+pass "a recorder that dies on start reports an error"
+
+# The overlay starter clears any old overlay first, so the cleanup is the second kill
+(( $(grep -cFx -- '-f WebcamOverlay' "$OMARCHY_TEST_PKILL_ARGS") >= 2 )) ||
+  fail "a recorder that dies on start closes the webcam overlay" "$(cat "$OMARCHY_TEST_PKILL_ARGS")"
+pass "a recorder that dies on start closes the webcam overlay"
+
+[[ ! -e $XDG_RUNTIME_DIR/omarchy-screenrecord-region ]] ||
+  fail "a recorder that dies on start removes the region file"
+pass "a recorder that dies on start removes the region file"
+
+[[ ! -e $XDG_RUNTIME_DIR/omarchy-screenrecord-filename ]] ||
+  fail "a recorder that dies on start records no active recording"
+pass "a recorder that dies on start records no active recording"
