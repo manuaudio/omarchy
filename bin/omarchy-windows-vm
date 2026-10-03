@@ -1161,7 +1161,8 @@ install_windows() {
   trap "echo ''; echo 'Installation cancelled by user'; exit 1" INT
 
   prepare_user_mount_sources || exit 1
-  check_prerequisites
+  # Check against the smallest disk offered; the chosen size is re-checked below.
+  check_prerequisites 32
 
   omarchy-pkg-add freerdp openbsd-netcat gum
 
