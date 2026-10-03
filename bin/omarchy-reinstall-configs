@@ -14,9 +14,17 @@ echo "Resetting Omarchy user configs to shipped defaults..."
 # /etc/skel is the same tree useradd -m copies to seed a fresh user's $HOME.
 # Replaying it over an existing user resyncs every package-shipped user
 # default in one pass: .bashrc, .config/**, .local/share/applications,
-# nautilus-python extensions, branding, hypr toggles, and migration markers.
+# nautilus-python extensions, branding, and hypr toggles.
 # Trailing dot copies dotfiles; the shell wouldn't glob them with /etc/skel/*.
-cp -af /etc/skel/. ~/
+#
+# The skel also marks every shipped migration done so a new account starts
+# current. This account may still owe some, and a config reset must not skip
+# them, so the markers for whatever was pending are taken back out.
+mapfile -t pending < <(omarchy-migrate --pending)
+cp -af "${OMARCHY_SKEL_DIR:-/etc/skel}/." ~/
+for migration in "${pending[@]}"; do
+  rm -f "$HOME/.local/state/omarchy/migrations/$migration"
+done
 
 omarchy-refresh-limine
 omarchy-refresh-plymouth

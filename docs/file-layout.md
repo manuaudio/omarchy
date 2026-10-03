@@ -335,7 +335,9 @@ When an existing user wants to reset to shipped defaults:
 Replaying `/etc/skel` over `$HOME` is exactly what `useradd -m` does for a
 brand-new user, so this one copy resyncs `.bashrc`, `.config/**`,
 `.local/share/applications/`, the nautilus-python extensions, hypr toggles,
-branding files, and the shipped migration markers in a single pass.
+and branding files in a single pass.
+
+The copy must not change the user's migration state. `/etc/skel` marks every shipped migration complete so a new account starts current, but an existing user may still have migrations pending, often machine-wide repairs no other user will apply. The command records `omarchy-migrate --pending` before the copy and removes those markers after it, so they still run on the next `omarchy-migrate`.
 
 Then it runs `omarchy-refresh-limine`, `omarchy-refresh-plymouth`, and the
 nvim refresh. Destructive: existing user files copied from `/etc/skel` are
