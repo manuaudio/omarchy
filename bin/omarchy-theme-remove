@@ -15,7 +15,8 @@ if [[ -z $1 ]]; then
     exit 1
   fi
 else
-  THEME_NAME="$1"
+  # Accept display names as printed by omarchy-theme-list, the same way omarchy-theme-set does.
+  THEME_NAME=$(echo "$1" | sed -E 's/<[^>]+>//g' | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
 fi
 
 THEMES_DIR="$HOME/.config/omarchy/themes"

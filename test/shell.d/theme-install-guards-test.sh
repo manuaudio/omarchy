@@ -210,3 +210,16 @@ for name in ".." "." "../../evil" ".git"; do
 done
 
 pass "a theme name cannot climb out of the themes directory on the way to rm"
+
+# omarchy-theme-list prints display names, so remove takes them as well as folder names.
+user_themes="$test_tmp/home/.config/omarchy/themes"
+
+mkdir -p "$user_themes/my-cool-theme"
+remove_theme "My Cool Theme" || fail "omarchy-theme-remove accepts a display name" "$(cat "$test_tmp/out")"
+[[ ! -d $user_themes/my-cool-theme ]] || fail "omarchy-theme-remove removes the theme named by its display name"
+
+mkdir -p "$user_themes/my-cool-theme"
+remove_theme "my-cool-theme" || fail "omarchy-theme-remove accepts a folder name" "$(cat "$test_tmp/out")"
+[[ ! -d $user_themes/my-cool-theme ]] || fail "omarchy-theme-remove removes the theme named by its folder name"
+
+pass "a theme can be removed by its display name or its folder name"
