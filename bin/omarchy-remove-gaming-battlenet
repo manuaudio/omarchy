@@ -18,9 +18,10 @@ update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
 echo
 echo "Battle.net and its Proton prefix at $PREFIX have been removed."
 
-if omarchy-pkg-present umu-launcher; then
+# Lutris runs games through umu too, so only offer to drop it when Lutris is gone.
+if omarchy-pkg-present umu-launcher && ! omarchy-pkg-present lutris; then
   echo
-  if gum confirm "Also remove umu-launcher? It's only used by this command."; then
+  if gum confirm "Also remove umu-launcher? Nothing else installed by Omarchy uses it."; then
     omarchy-pkg-drop umu-launcher
   fi
 fi

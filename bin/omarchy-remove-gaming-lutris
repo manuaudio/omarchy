@@ -5,17 +5,26 @@
 
 set -e
 
-omarchy-pkg-drop lutris wine-staging wine-mono wine-gecko winetricks python-protobuf umu-launcher
+BATTLENET_PREFIX="$HOME/Games/battlenet"
+
+omarchy-pkg-drop lutris wine-staging wine-mono wine-gecko winetricks python-protobuf
 
 rm -rf \
   "$HOME/.config/lutris" \
   "$HOME/.local/share/lutris" \
   "$HOME/.cache/lutris" \
-  "$HOME/.local/share/umu" \
-  "$HOME/.cache/umu" \
   "$HOME/.wine" \
   "$HOME/.cache/wine" \
   "$HOME/.cache/winetricks"
 
 echo ""
-echo "Lutris, Wine, umu-launcher, and their configs have been removed."
+
+# Battle.net launches through umu-run, so keep umu while its prefix exists.
+if [[ -d $BATTLENET_PREFIX ]]; then
+  echo "Lutris, Wine, and their configs have been removed."
+  echo "umu-launcher was kept because Battle.net still uses it."
+else
+  omarchy-pkg-drop umu-launcher
+  rm -rf "$HOME/.local/share/umu" "$HOME/.cache/umu"
+  echo "Lutris, Wine, umu-launcher, and their configs have been removed."
+fi
