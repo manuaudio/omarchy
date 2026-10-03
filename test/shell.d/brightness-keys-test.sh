@@ -18,6 +18,33 @@ for (const [action, current, target] of steps) {
   assertEqual(model.brightnessKeyTarget(action, current), target, `brightness ${action} from ${current}% lands on ${target}%`)
 }
 
+// The keys write a raw level, not a percentage: brightnessctl turns "N%" into
+// roundf(N / 100 * max) with no minimum step, so on a coarse backlight a 5%
+// step rounds back to the level it started from and the keys stick.
+const brightnessctlRaw = (percent, max) => Math.round(percent / 100 * max)
+for (const max of [7, 8, 10, 15, 24, 100, 255, 937, 19393]) {
+  // 1% as brightnessctl writes it, but never 0, which turns the panel off.
+  const floor = Math.max(brightnessctlRaw(1, max), 1)
+  const wrong = []
+  for (let raw = 0; raw <= max; raw++) {
+    const up = model.brightnessKeyRawTarget('raise', raw, max)
+    const down = model.brightnessKeyRawTarget('lower', raw, max)
+    const upOk = Number.isInteger(up) && (raw < max ? up > raw && up <= max : up === max)
+    const downOk = Number.isInteger(down) && (raw > floor ? down < raw && down >= floor : down === raw)
+    if (!upOk) wrong.push(`raise ${raw}->${up}`)
+    if (!downOk) wrong.push(`lower ${raw}->${down}`)
+  }
+  assertDeepEqual(wrong, [], `brightness keys on max_brightness ${max} move every level by at least one raw step, between ${floor} and ${max}`)
+}
+
+// On a fine backlight the raw target is the percentage step the script takes.
+for (const max of [100, 19393]) {
+  for (const [action, current, target] of steps) {
+    const raw = brightnessctlRaw(current, max)
+    assertEqual(model.brightnessKeyRawTarget(action, raw, max), brightnessctlRaw(target, max), `on max ${max}, brightness ${action} from ${current}% writes ${target}%`)
+  }
+}
+
 const qml = fs.readFileSync(path.join(root, 'shell/services/BrightnessKeys.qml'), 'utf8')
 assert(
   qml.includes('if (!/^(eDP|LVDS|DSI)-/.test(name) || !device) return false'),
@@ -32,8 +59,12 @@ assert(
   'brightness keys read the current level fresh, so a level changed elsewhere steps from the right place'
 )
 assert(
-  qml.includes('var current = Math.round(100 * readNumber(brightnessFile) / max)') &&
-    qml.includes('var percent = Math.round(100 * readNumber(brightnessFile) / max)'),
+  qml.includes('BrightnessModel.brightnessKeyRawTarget(action, readNumber(brightnessFile), max)') &&
+    !/brightnessKeyTarget\(action, current\) \+ "%"/.test(qml),
+  'brightness keys write the raw level the model picks, not a percentage brightnessctl can round back'
+)
+assert(
+  qml.includes('var percent = Math.round(100 * readNumber(brightnessFile) / max)'),
   'brightness keys compute percentages as brightnessctl reports them'
 )
 

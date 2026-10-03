@@ -10,8 +10,9 @@ import "BrightnessModel.js" as BrightnessModel
 // process, instead of omarchy-brightness-display resolving the monitor and
 // device, reading, writing and reading back, then an IPC client for the OSD.
 // They step, clamp and read back the way that script does, so either path
-// lands on the same level and OSD. External and Apple displays go through the
-// script, which drives them over DDC or their own helper.
+// lands on the same level and OSD, except that a press here always moves a
+// coarse backlight by at least one raw step. External and Apple displays go
+// through the script, which drives them over DDC or their own helper.
 Item {
   id: root
 
@@ -36,9 +37,9 @@ Item {
 
     var max = readNumber(maxFile)
     if (!(max > 0)) return false
-    var current = Math.round(100 * readNumber(brightnessFile) / max)
+    var target = BrightnessModel.brightnessKeyRawTarget(action, readNumber(brightnessFile), max)
 
-    setProc.command = ["brightnessctl", "-q", "-d", device, "set", BrightnessModel.brightnessKeyTarget(action, current) + "%"]
+    setProc.command = ["brightnessctl", "-q", "-d", device, "set", String(target)]
     setProc.running = true
     return true
   }
