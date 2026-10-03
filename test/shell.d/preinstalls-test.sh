@@ -91,3 +91,18 @@ pass "declining Remove Preinstalls changes nothing"
 "$ROOT/bin/omarchy-remove-preinstalls" >/dev/null
 [[ -f $marker ]] || fail "Remove Preinstalls records the opt-out"
 pass "Remove Preinstalls records the opt-out"
+
+# Only the wrappers omarchy-mise-install wrote are preinstalls. The agents' own
+# installers use the same names, like the link Claude Code's native installer
+# leaves at ~/.local/bin/claude, and those belong to the user.
+mkdir -p "$test_home/.local/bin" "$test_home/.local/share/claude/versions"
+printf '#!/bin/bash\n' >"$test_home/.local/share/claude/versions/2.1.0"
+ln -s ../share/claude/versions/2.1.0 "$test_home/.local/bin/claude"
+printf '#!/bin/bash\necho my-gh\n' >"$test_home/.local/bin/gh"
+omarchy-mise-install codex
+"$ROOT/bin/omarchy-remove-preinstalls" >/dev/null
+[[ ! -e $test_home/.local/bin/codex ]] || fail "Remove Preinstalls deletes Omarchy's mise wrappers"
+pass "Remove Preinstalls deletes Omarchy's mise wrappers"
+[[ -L $test_home/.local/bin/claude && -f $test_home/.local/bin/gh ]] ||
+  fail "Remove Preinstalls keeps the user's own launchers at the wrapper names" "$(ls -l "$test_home/.local/bin")"
+pass "Remove Preinstalls keeps the user's own launchers at the wrapper names"

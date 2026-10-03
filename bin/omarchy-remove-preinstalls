@@ -12,23 +12,15 @@ if gum confirm "Are you sure you want to remove all preinstalled web apps, TUI w
   touch ~/.local/state/omarchy/preinstalls-removed
   hyprctl reload
 
-  # Remove mise stubs
-  rm -f ~/.local/bin/codex ~/.local/bin/claude ~/.local/bin/agy ~/.local/bin/copilot \
-       ~/.local/bin/gh ~/.local/bin/opencode ~/.local/bin/playwright ~/.local/bin/playwright-cli ~/.local/bin/pi \
-       ~/.local/bin/omp ~/.local/bin/ori ~/.local/bin/grok ~/.local/bin/crush ~/.local/bin/ghui ~/.local/bin/hunk
-
-  # Cursor's own installer links ~/.local/bin/cursor-agent as well, so only
-  # the mise wrapper omarchy-mise-install wrote is a preinstall.
-  if [[ -f ~/.local/bin/cursor-agent && ! -L ~/.local/bin/cursor-agent ]] &&
-    grep -Eq '^mise use -g .*"cursor-agent"' ~/.local/bin/cursor-agent; then
-    rm -f ~/.local/bin/cursor-agent
-  fi
-
-  # Preserve a user-managed Muse launcher at the same path.
-  if [[ -f ~/.local/bin/muse && ! -L ~/.local/bin/muse ]] &&
-    grep -Eq '^mise use -g .*"http:muse\[' ~/.local/bin/muse; then
-    rm -f ~/.local/bin/muse
-  fi
+  # Remove the mise wrappers omarchy-mise-install wrote. The agents' own
+  # installers link the same names, like Claude Code's native install and
+  # Cursor's, and anything but the wrapper is the user's to keep.
+  for command in codex claude agy copilot gh opencode playwright playwright-cli pi omp ori grok crush ghui hunk cursor-agent muse; do
+    wrapper="$HOME/.local/bin/$command"
+    if [[ -f $wrapper && ! -L $wrapper ]] && grep -q '^mise use -g' "$wrapper"; then
+      rm -f "$wrapper"
+    fi
+  done
 
   omarchy-pkg-drop \
     aether \
