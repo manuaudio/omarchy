@@ -197,7 +197,7 @@ notifier also refuses to run while `omarchy update` holds its
 trigger added later — during an update, every pending migration is by
 definition already being applied a step away. It checks again after waiting for
 the notification server, since that wait is long enough for an update to start
-underneath it.
+underneath it. A toast already on screen can still be clicked once an update starts, so `omarchy-migrate` itself exits without running anything when another process holds that lock; the update's own `omarchy-migrate` inherits the lock and runs normally.
 
 The notifier reads only its own user's runtime directory, never the `/tmp` path
 `omarchy-update` falls back to when `XDG_RUNTIME_DIR` is unset. A shared lock

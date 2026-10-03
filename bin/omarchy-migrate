@@ -65,6 +65,25 @@ if [[ $mode == "pending" ]]; then
   fi
 fi
 
+# The update runs omarchy-migrate itself while holding the update lock, so a
+# second run started from the migration toast or another terminal would apply
+# the same migrations concurrently and collide with it on pacman's lock. Like
+# omarchy-migrate-notify, read only this user's runtime directory.
+update_in_progress_elsewhere() {
+  local lock="${XDG_RUNTIME_DIR:-}/omarchy-update.lock"
+
+  [[ -n ${XDG_RUNTIME_DIR:-} && -f $lock ]] || return 1
+  omarchy-update-lock held && return 1
+
+  # flock -n only fails here when the lock is held, since the file is ours.
+  ! flock -n "$lock" true 2>/dev/null
+}
+
+if update_in_progress_elsewhere; then
+  echo "An Omarchy update is running and will apply pending migrations."
+  exit 0
+fi
+
 wait_for_pacman_transaction() {
   local lock_file=/var/lib/pacman/db.lck
 
