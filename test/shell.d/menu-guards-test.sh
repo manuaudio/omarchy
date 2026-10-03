@@ -17,7 +17,7 @@ const script = menu.guardScript(items)
 const browserSlot = `\${__omarchy_read_${menu.guardReaders.indexOf('omarchy-default-browser')}}`
 
 assert(
-  script.includes('if { omarchy-pkg-present brave-bin; } >/dev/null 2>&1; then echo setup.default.browser.brave:w:1; else echo setup.default.browser.brave:w:0; fi'),
+  script.includes("if eval 'omarchy-pkg-present brave-bin' >/dev/null 2>&1; then echo setup.default.browser.brave:w:1; else echo setup.default.browser.brave:w:0; fi"),
   'guard script reports a when: as <id>:w:<0|1>'
 )
 assert(
@@ -25,7 +25,7 @@ assert(
   'guard script reports a checked: as <id>:c:<0|1>'
 )
 assert(
-  script.includes('if { omarchy-pkg-present zen-browser-bin; } >/dev/null 2>&1; then echo install.browser.zen:d:1; else echo install.browser.zen:d:0; fi'),
+  script.includes("if eval 'omarchy-pkg-present zen-browser-bin' >/dev/null 2>&1; then echo install.browser.zen:d:1; else echo install.browser.zen:d:0; fi"),
   'guard script reports a disabled: as <id>:d:<0|1>'
 )
 assert(!/\bplain:[wcd]:/.test(script), 'guard script skips items with nothing to evaluate')
@@ -43,7 +43,7 @@ assert(
   'guard script substitutes the captured answer into the expression'
 )
 assert(
-  script.indexOf('__omarchy_read_') < script.indexOf('if { omarchy-pkg-present'),
+  script.indexOf('__omarchy_read_') < script.indexOf('if eval '),
   'guard script captures readers before any guard runs, since $() would trap a lazy memo in its subshell'
 )
 
@@ -85,7 +85,7 @@ prelude() {
     const path = require("path")
     const menu = require(path.join(process.env.ROOT, "shell/plugins/menu/MenuModel.js"))
     process.stdout.write(menu.guardScript({ probe: { id: "probe", when: "true" } }))
-  ' | command grep -v '^if {'
+  ' | command grep -v '^if eval '
 }
 
 # The prelude shadows the real commands for the length of the batch, so it has
@@ -198,6 +198,25 @@ printf "survived\n"' 2>/dev/null)
 [[ $errexit_result == $'hit:c:1\nmiss:c:0\nsurvived' ]] ||
   fail "guard batch survives a failing reader under errexit" "got: $errexit_result"
 pass "guard batch survives a reader that exits nonzero under errexit"
+
+# Every guard shares the one batch, and an extension is free to write a broken
+# one. The typo has to cost its own row only: a parse error that ends the batch
+# makes the menu keep no answers at all, and every hidden row shows.
+broken_script=$(node -e '
+  const path = require("path")
+  const menu = require(path.join(process.env.ROOT, "shell/plugins/menu/MenuModel.js"))
+  process.stdout.write(menu.guardScript({
+    before: { id: "before", when: "false" },
+    typo: { id: "typo", when: "[[ -f /etc/hostname ]" },
+    quote: { id: "quote", checked: "[[ \"$(echo it'"'"'s)\" == x ]]" },
+    after: { id: "after", when: "true" }
+  }))
+')
+broken_status=0
+broken_result=$(bash -c "$broken_script" 2>/dev/null) || broken_status=$?
+[[ $broken_status == 0 && $broken_result == $'before:w:0\ntypo:w:0\nquote:c:0\nafter:w:1' ]] ||
+  fail "a malformed guard fails its own row and leaves the rest of the batch answered" "status: $broken_status, got: $broken_result"
+pass "a malformed guard fails its own row and leaves the rest of the batch answered"
 
 # Update > Extra Themes runs omarchy-theme-update, which pulls the themes that
 # came from a git clone and skips everything else, so the guard has to answer

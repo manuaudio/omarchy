@@ -466,9 +466,21 @@ function substituteGuardReaders(expression) {
   return expression
 }
 
+// Each guard reaches bash through eval, so it is parsed on its own when its
+// turn comes. Pasted in as script text, one malformed expression -- an
+// unclosed quote or a `[[ ... ]` in a user's extension -- would be a syntax
+// error for the whole batch, which exits nonzero and leaves the menu with no
+// answers at all. Under eval it is one more guard that failed. The reader
+// slots expand when eval runs, as they did inline. A guard that calls `exit`
+// still ends the batch; only a subshell per row would contain that, and the
+// fork per row is exactly what the batch exists to avoid.
 function guardLine(id, tag, expression) {
-  return "if { " + substituteGuardReaders(expression) + "; } >/dev/null 2>&1; then echo "
+  return "if eval " + shellQuote(substituteGuardReaders(expression)) + " >/dev/null 2>&1; then echo "
     + id + ":" + tag + ":1; else echo " + id + ":" + tag + ":0; fi\n"
+}
+
+function shellQuote(value) {
+  return "'" + String(value).replace(/'/g, "'\\''") + "'"
 }
 
 // One bash script for every `when:`, `checked:` and `disabled:` in the menu,
