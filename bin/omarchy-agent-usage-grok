@@ -260,7 +260,10 @@ def collect_limits(home, key, force):
   else:
     result["limits"] = cached.get("limits") or []
     if not result["usageStatusText"] and not result["limits"]:
+      # Signed in, but xAI didn't answer: say that rather than asking for a
+      # sign-in that wouldn't help.
       result["usageStatusText"] = "Grok limits unavailable"
+      result["authHelpText"] = "Couldn't reach xAI's usage endpoint. Retrying shortly. Local Grok stats are still shown."
   return result
 
 
