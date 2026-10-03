@@ -1068,6 +1068,12 @@ ShellRoot {
   // new shellConfig in a local clone, and only persist if anything actually
   // changed so reactive bindings do not dirty shell.json unnecessarily.
   function updateEntryInline(moduleName, settings) {
+    // Entries may be bare id strings or objects, as every layout reader
+    // accepts; a matched string is replaced by the object form below.
+    function inlineEntryId(entry) {
+      return typeof entry === "string" ? entry : entry.id
+    }
+
     var stripped = Util.canonicalWidgetId(moduleName)
     var copy = JSON.parse(JSON.stringify(shellConfig || builtinShellConfig))
     if (!Util.isPlainObject(copy.bar)) copy.bar = { layout: { left: [], center: [], right: [] } }
@@ -1080,7 +1086,7 @@ ShellRoot {
     for (var s = 0; s < sections.length; s++) {
       var arr = copy.bar.layout[sections[s]] || []
       for (var i = 0; i < arr.length; i++) {
-        if (arr[i] && Util.canonicalWidgetId(arr[i].id) === stripped) {
+        if (arr[i] && Util.canonicalWidgetId(inlineEntryId(arr[i])) === stripped) {
           var next = { id: stripped }
           for (var k in settings) if (k !== "id") next[k] = settings[k]
           if (JSON.stringify(arr[i]) !== JSON.stringify(next)) {
@@ -1093,7 +1099,7 @@ ShellRoot {
     }
     if (!foundInLayout) {
       for (var j = 0; j < copy.plugins.length; j++) {
-        if (copy.plugins[j] && copy.plugins[j].id === stripped) {
+        if (copy.plugins[j] && inlineEntryId(copy.plugins[j]) === stripped) {
           var pnext = { id: stripped }
           for (var pk in settings) if (pk !== "id") pnext[pk] = settings[pk]
           if (JSON.stringify(copy.plugins[j]) !== JSON.stringify(pnext)) {
