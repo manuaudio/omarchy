@@ -132,6 +132,25 @@ function customModulePath(entry, home, configDir) {
   return source
 }
 
+// Numeric settings of a custom command module, as a finite number. A value
+// such as "12px" or "10s" is NaN through Number(), and QML silently turns NaN
+// into 0 on int properties, so anything non-numeric falls back to the default.
+function customModuleNumber(entry, key, fallback) {
+  var value = entrySettings(entry)[key]
+  if (value === undefined || value === null || value === "") return fallback
+  var number = Number(value)
+  return isFinite(number) ? number : fallback
+}
+
+// The refresh timer interval in milliseconds. A non-positive interval falls
+// back to the 5s default, and anything shorter than a second is raised to one,
+// so the exec command can never be re-spawned in a tight loop.
+function customModuleIntervalMs(entry) {
+  var seconds = customModuleNumber(entry, "interval", 5)
+  if (seconds <= 0) seconds = 5
+  return Math.round(Math.max(1, seconds) * 1000)
+}
+
 // A center module is mounted twice once an anchor is set: the copy that is
 // actually drawn, and a zero-size placeholder holding its place in the flow
 // beside the anchor. Panel routing has to pick the drawn one — it is the only
@@ -226,6 +245,8 @@ if (typeof module !== "undefined") {
     expandPath: expandPath,
     customModuleSafeName: customModuleSafeName,
     customModuleType: customModuleType,
-    customModulePath: customModulePath
+    customModulePath: customModulePath,
+    customModuleNumber: customModuleNumber,
+    customModuleIntervalMs: customModuleIntervalMs
   }
 }

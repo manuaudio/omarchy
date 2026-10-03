@@ -2040,9 +2040,9 @@ Item {
     tooltipText: outputTooltip || String(setting("tooltip", ""))
     active: outputActive
     keepSpace: setting("keepSpace", false) === true
-    horizontalMargin: Number(setting("horizontalMargin", 7.5))
-    verticalPadding: Number(setting("verticalPadding", 6))
-    fontSize: Number(setting("fontSize", 12))
+    horizontalMargin: BarModel.customModuleNumber(entry, "horizontalMargin", 7.5)
+    verticalPadding: BarModel.customModuleNumber(entry, "verticalPadding", 6)
+    fontSize: BarModel.customModuleNumber(entry, "fontSize", 12)
 
     onPressed: function(button) {
       var command = ""
@@ -2066,7 +2066,7 @@ Item {
     }
 
     Timer {
-      interval: Math.max(1, Number(customRoot.setting("interval", 5))) * 1000
+      interval: BarModel.customModuleIntervalMs(customRoot.entry)
       running: String(customRoot.setting("exec", "")) !== ""
       repeat: true
       triggeredOnStart: true

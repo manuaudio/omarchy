@@ -354,6 +354,27 @@ assertEqual(
   '/home/dhh/.config/omarchy/bar/modules/local.weather.qml',
   'bar builds default custom module paths'
 )
+
+// A non-numeric interval used to reach the Timer as NaN, which QML turns
+// into 0, re-spawning the exec command as soon as it exits.
+assertEqual(bar.customModuleIntervalMs({ id: 'custom', interval: 5 }), 5000, 'bar converts custom module intervals to milliseconds')
+assertEqual(bar.customModuleIntervalMs({ id: 'custom', interval: '10' }), 10000, 'bar accepts numeric string custom module intervals')
+assertEqual(bar.customModuleIntervalMs({ id: 'custom', interval: '10s' }), 5000, 'bar falls back to the default for non-numeric custom module intervals')
+assertEqual(bar.customModuleIntervalMs({ id: 'custom', interval: 0 }), 5000, 'bar falls back to the default for a zero custom module interval')
+assertEqual(bar.customModuleIntervalMs({ id: 'custom', interval: -3 }), 5000, 'bar falls back to the default for a negative custom module interval')
+assertEqual(bar.customModuleIntervalMs({ id: 'custom', interval: 0.2 }), 1000, 'bar keeps custom module intervals at least one second')
+assertEqual(bar.customModuleIntervalMs({ id: 'custom' }), 5000, 'bar defaults missing custom module intervals')
+assertEqual(bar.customModuleNumber({ id: 'custom', fontSize: '12px' }, 'fontSize', 12), 12, 'bar falls back to the default for non-numeric custom module numbers')
+assertEqual(bar.customModuleNumber({ id: 'custom', fontSize: '14' }, 'fontSize', 12), 14, 'bar accepts numeric string custom module numbers')
+assertEqual(bar.customModuleNumber({ id: 'custom' }, 'fontSize', 12), 12, 'bar defaults missing custom module numbers')
+assert(
+  /interval:\s*BarModel\.customModuleIntervalMs\(customRoot\.entry\)/.test(barSource),
+  'custom command module timer uses the guarded interval helper'
+)
+assert(
+  /fontSize:\s*BarModel\.customModuleNumber\(entry, "fontSize", 12\)/.test(barSource),
+  'custom command module font size uses the guarded number helper'
+)
 JS
 
 put_tmp=$(mktemp -d)
