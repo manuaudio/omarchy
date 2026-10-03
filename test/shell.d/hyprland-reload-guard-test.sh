@@ -84,3 +84,38 @@ touch "$state_dir/some-signature"
 OMARCHY_HYPRLAND_RELOAD_GUARD_STATE_DIR="$state_dir" "$ROOT/bin/omarchy-hyprland-reload-guard" paused ||
   fail "reload guard reports itself paused during a transaction"
 pass "reload guard reports whether a transaction is holding reloads"
+
+# Hyprland re-runs bootstrap.lua and re-requires toggles.lua in the same Lua
+# state on every reload, so their package.path entries must not pile up.
+# `lua -` rather than bare `lua`: Lua 5.4 exits 0 on an error in a script it
+# reads from a non-terminal stdin without the dash.
+require_command lua
+mkdir -p "$test_tmp/home"
+HOME="$test_tmp/home" XDG_STATE_HOME="$test_tmp/home/.local/state" OMARCHY_PATH="$ROOT" lua - <<'LUA' ||
+local noop = function() return function() end end
+package.preload["default.hypr.require_all"] = function() return { files = function() end } end
+package.preload["default.hypr.disabled-input-device"] = noop
+package.preload["default.hypr.workspace-layouts"] = function() return true end
+
+local original = package.path
+local function reload()
+  dofile(os.getenv("OMARCHY_PATH") .. "/default/hypr/bootstrap.lua")
+  require("default.hypr.toggles")
+end
+
+reload()
+local home, root = os.getenv("HOME"), os.getenv("OMARCHY_PATH")
+local expected = home .. "/.local/state/omarchy/toggles/hypr/?.lua;"
+  .. home .. "/.local/state/?.lua;"
+  .. home .. "/.config/?.lua;"
+  .. root .. "/?.lua;"
+  .. original
+assert(package.path == expected, "first load package.path: " .. package.path)
+
+reload()
+assert(package.path == expected, "second load package.path: " .. package.path)
+reload()
+assert(package.path == expected, "third load package.path: " .. package.path)
+LUA
+  fail "Hyprland reloads keep package.path stable"
+pass "Hyprland reloads keep package.path stable"

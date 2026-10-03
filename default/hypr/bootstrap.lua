@@ -29,11 +29,15 @@ for _, module in ipairs(modules_to_reload) do
 end
 
 -- Load generated state from ~/.local/state, user modules from ~/.config, and
--- Omarchy defaults from $OMARCHY_PATH.
-package.path = home
+-- Omarchy defaults from $OMARCHY_PATH. Every reload re-runs this file in the
+-- same Lua state, so only prepend the entries once.
+local omarchy_package_path = home
   .. "/.local/state/?.lua;"
   .. home
   .. "/.config/?.lua;"
   .. (os.getenv("OMARCHY_PATH") or "/usr/share/omarchy")
   .. "/?.lua;"
-  .. package.path
+
+if not (";" .. package.path):find(";" .. omarchy_package_path, 1, true) then
+  package.path = omarchy_package_path .. package.path
+end
