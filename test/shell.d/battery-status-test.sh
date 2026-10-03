@@ -56,6 +56,10 @@ remaining=$(battery_time "30.0 minutes")
 [[ $remaining == "30m" ]] || fail "battery status reports remaining minutes" "$remaining"
 remaining=$(battery_time "2.6 days")
 [[ $remaining == "62h 24m" ]] || fail "battery status reports remaining days as hours" "$remaining"
+remaining=$(battery_time "2.8 days")
+[[ $remaining == "67h 12m" ]] || fail "battery status rounds remaining days to whole minutes" "$remaining"
+remaining=$(battery_time "2.3 hours")
+[[ $remaining == "2h 18m" ]] || fail "battery status rounds remaining hours to whole minutes" "$remaining"
 
 if matches=$(rg -n 'omarchy-battery-(capacity|remaining|remaining-time)' "$ROOT/bin" "$ROOT/test" "$ROOT/shell" "$ROOT/docs"); then
   fail "battery status owns capacity and remaining calculations" "$matches"

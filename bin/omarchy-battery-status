@@ -34,8 +34,9 @@ time_remaining=$(awk '/time to (empty|full)/ {
     printf "%dm", int(value)
   } else {
     if (unit ~ /^day/) value *= 24
-    hours = int(value)
-    minutes = int((value - hours) * 60)
+    total = int(value * 60 + 0.5)
+    hours = int(total / 60)
+    minutes = total % 60
     if (minutes > 0) {
       printf "%dh %dm", hours, minutes
     } else {
