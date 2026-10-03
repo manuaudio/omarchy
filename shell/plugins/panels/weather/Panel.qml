@@ -139,8 +139,9 @@ Panel {
 
   readonly property bool useImperial: Model.shouldUseImperial(setting("unit", ""), Qt.locale().name, reportCountry)
 
-  // Auto-refresh interval in minutes; clamped to a sane minimum.
-  readonly property int refreshMinutes: Math.max(1, parseInt(setting("refreshMinutes", 15), 10) || 15)
+  // Auto-refresh interval in minutes, at least one and no more than a Qt
+  // Timer can hold.
+  readonly property int refreshMinutes: Util.timerIntervalCount(setting("refreshMinutes", 15), 15, 1, 60 * 1000)
 
   readonly property string reportLocation:  configuredLocation || wttrLocation || (areaInfo && areaInfo.areaName && areaInfo.areaName[0] ? areaInfo.areaName[0].value : "")
   readonly property string reportTempNum:   current ? String(useImperial ? current.temp_F : current.temp_C) : ""

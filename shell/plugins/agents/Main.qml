@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.Commons
 
 // The display side of agent usage. All extraction lives behind
 // omarchy-agent-usage-update, which writes one JSON record per agent into
@@ -121,7 +122,7 @@ Item {
 
   // -------------------------------------------------------------- refresh
 
-  property int refreshIntervalSec: Math.max(30, Number(setting("refreshIntervalSec", 900)))
+  property int refreshIntervalSec: Util.timerIntervalCount(setting("refreshIntervalSec", 900), 900, 30, 1000)
   property string pendingUpdateKind: ""
 
   // A fifteen-minute interval can't catch an account crossing its switch

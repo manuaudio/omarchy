@@ -1,6 +1,7 @@
 pragma Singleton
 import Quickshell
 import QtQuick
+import "TimerInterval.js" as TimerInterval
 
 // Shared utility helpers used across plugins. Pure functions only — no
 // state. Anything stateful belongs on Color, Style, or a service.
@@ -11,6 +12,12 @@ QtObject {
     var n = Number(value)
     if (!isFinite(n)) return min
     return Math.max(min, Math.min(max, n))
+  }
+
+  // A user-configured Timer interval as whole units of unitMs, kept finite
+  // and within Qt's 32-bit millisecond range. See TimerInterval.js.
+  function timerIntervalCount(value, fallback, min, unitMs) {
+    return TimerInterval.count(value, fallback, min, unitMs)
   }
 
   function clampAlpha(value) {
