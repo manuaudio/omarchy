@@ -9,6 +9,10 @@ else
   # Callers may pass the whole command as one string, which omarchy-launch-or-focus
   # re-splits, so omarchy-launch-tui names the window after its first word only.
   read -r COMMAND _ <<<"$1"
+  # That re-split also removes quotes, so strip one matching pair around the word.
+  if [[ $COMMAND == \'*\' || $COMMAND == \"*\" ]]; then
+    COMMAND=${COMMAND:1:-1}
+  fi
   APP_ID="org.omarchy.$(basename "$COMMAND")"
 fi
 

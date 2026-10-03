@@ -27,6 +27,8 @@ focus_pattern() {
 [[ $(focus_pattern btop) == "org.omarchy.btop" ]] || fail "single-word TUI focuses its own app id"
 [[ $(focus_pattern "zsh -c 'fastfetch; read -k 1'") == "org.omarchy.zsh" ]] || fail "TUI command string focuses the app id launch-tui derives from its first word"
 [[ $(focus_pattern /usr/bin/btop) == "org.omarchy.btop" ]] || fail "TUI path focuses the app id of its basename"
+[[ $(focus_pattern "'btop' --help") == "org.omarchy.btop" ]] || fail "single-quoted first word focuses the unquoted app id"
+[[ $(focus_pattern '"btop" --help') == "org.omarchy.btop" ]] || fail "double-quoted first word focuses the unquoted app id"
 [[ $(focus_pattern --app-id=org.omarchy.about omarchy-launch-about --render) == "org.omarchy.about" ]] || fail "explicit app id is used as the focus pattern"
 
 pass "launch-or-focus-tui focuses the app id launch-tui sets"
