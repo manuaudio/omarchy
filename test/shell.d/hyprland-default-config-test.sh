@@ -167,7 +167,6 @@ pass "installed Voxtype detection works without os.execute"
 missing_bin="$tmpdir/missing-bin"
 mkdir -p "$missing_bin"
 ln -s "$(command -v lua)" "$missing_bin/lua"
-ln -s "$(command -v lspci)" "$missing_bin/lspci"
 ln -s "$(command -v sort)" "$missing_bin/sort"
 missing_voxtype_output=$(PATH="$missing_bin" run_omarchy_bindings "$voxtype_home")
 if grep -Fq $'SUPER + CTRL + X	Toggle dictation' <<<"$missing_voxtype_output"; then
