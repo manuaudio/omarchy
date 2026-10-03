@@ -201,7 +201,9 @@ remove_theme() {
 canary="$test_tmp/home/.config/omarchy/canary"
 printf 'still here\n' >"$canary"
 
-for name in ".." "." "../../evil" ".git"; do
+# The name is normalised before the guard sees it, so markup that strips down to
+# a climb is refused too.
+for name in ".." "." "../../evil" ".git" "<b>..</b>"; do
   if remove_theme "$name"; then
     fail "omarchy-theme-remove refuses the theme name '$name'"
   fi
@@ -210,3 +212,11 @@ for name in ".." "." "../../evil" ".git"; do
 done
 
 pass "a theme name cannot climb out of the themes directory on the way to rm"
+
+# omarchy theme list prints display names, and remove takes them as set does.
+mkdir -p "$test_tmp/home/.config/omarchy/themes/synthwave-84"
+remove_theme "Synthwave 84" || fail "omarchy-theme-remove accepts the name omarchy theme list prints" "$(cat "$test_tmp/out")"
+[[ ! -e $test_tmp/home/.config/omarchy/themes/synthwave-84 ]] ||
+  fail "omarchy-theme-remove removes the theme that name belongs to"
+
+pass "a theme can be removed by the name omarchy theme list prints"
