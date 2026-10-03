@@ -163,7 +163,7 @@ Item {
       cursorActive = true
       selectedIndex = delta < 0 ? displayModel.count - 1 : 0
     } else {
-      selectedIndex = (selectedIndex + delta + displayModel.count) % displayModel.count
+      selectedIndex = ClipboardHistory.stepIndex(selectedIndex, delta, displayModel.count)
     }
     resultList.positionViewAtIndex(selectedIndex, ListView.Contain)
   }

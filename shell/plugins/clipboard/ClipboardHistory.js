@@ -79,6 +79,16 @@ function removeEntryAt(history, index) {
   return next
 }
 
+// Arrow keys step one row and wrap around the ends. Page keys jump several
+// rows and stop at the first or last row instead, as the emoji picker does:
+// wrapping a six-row jump through a short list lands back on the same row,
+// or below zero, where no row holds the cursor.
+function stepIndex(index, delta, count) {
+  if (count <= 0) return 0
+  if (Math.abs(delta) <= 1) return ((index + delta) % count + count) % count
+  return Math.max(0, Math.min(count - 1, index + delta))
+}
+
 function clearHistory() {
   return []
 }
@@ -213,6 +223,7 @@ if (typeof module !== "undefined") {
     addEntry: addEntry,
     removeEntryAt: removeEntryAt,
     clearHistory: clearHistory,
+    stepIndex: stepIndex,
     parseEntryJson: parseEntryJson,
     searchableText: searchableText,
     previewText: previewText,

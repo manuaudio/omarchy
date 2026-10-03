@@ -39,6 +39,13 @@ assertDeepEqual(
 
 assertDeepEqual(clipboard.parseHistory(JSON.stringify([' ', '\n', { type: 'text', text: '\t' }])), [], 'clipboard history parser drops whitespace-only text')
 
+assertEqual(clipboard.stepIndex(3, 1, 4), 0, 'clipboard Down wraps from the last entry to the first')
+assertEqual(clipboard.stepIndex(0, -1, 4), 3, 'clipboard Up wraps from the first entry to the last')
+assertEqual(clipboard.stepIndex(1, -6, 4), 0, 'clipboard Page Up in a short list stops on the first entry')
+assertEqual(clipboard.stepIndex(0, 6, 3), 2, 'clipboard Page Down in a short list reaches the last entry')
+assertEqual(clipboard.stepIndex(47, 6, 50), 49, 'clipboard Page Down stops on the last entry instead of wrapping to the top')
+assertEqual(clipboard.stepIndex(10, -6, 50), 4, 'clipboard Page Up moves six entries in a long list')
+
 const history = [
   { type: 'text', text: 'old' },
   { type: 'text', text: 'new' },
