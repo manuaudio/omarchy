@@ -383,6 +383,21 @@ assert(
     { originalId: 31, app: 'omarchy-action', summary: 'Screen recording saved', body: '', image: '/tmp/b.png', execArgv: '["mpv","--","/tmp/b.mp4"]' }),
   'notifications keep same-text toasts that preview and open different files'
 )
+// Chromium writes every notification's icon into its own mkdtemp directory,
+// so one reminder from two tabs carries the same icon under two paths.
+for (const dir of ['org.chromium.Chromium.scoped_dir.', '.org.chromium.Chromium.', 'com.google.Chrome.scoped_dir.']) {
+  const tab = image => Object.assign({}, heyReminder, { image: `image://icon//tmp/${dir}${image}/icon.png`, execArgv: '' })
+  assert(
+    notifications.isDuplicatePopup(tab('Ab12Cd'), Object.assign(tab('Xy34Zw'), { originalId: 21 })),
+    `notifications collapse the same web notification from several tabs under /tmp/${dir}XXXXXX`
+  )
+}
+assert(
+  !notifications.isDuplicatePopup(
+    Object.assign({}, heyReminder, { image: 'image://icon//tmp/Ab12Cd/icon.png' }),
+    Object.assign({}, heyReminder, { originalId: 21, image: 'image://icon//tmp/Xy34Zw/icon.png' })),
+  'notifications compare images outside Chromium scoped directories by their full path'
+)
 
 const settings = notifications.parseSettings(JSON.stringify({ version: 3, dnd: true }))
 assertEqual(settings.dnd, true, 'notifications parse the persisted DND state')

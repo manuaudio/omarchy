@@ -231,11 +231,24 @@ function popupRowChanged(row, updated) {
 // opens a different file.
 var DUPLICATE_ROLES = ["app", "summary", "body", "image", "execArgv"]
 
+// Chromium writes each notification's icon into a fresh mkdtemp directory
+// (the scoped /tmp files described below) and sends that path as the image,
+// so the same icon from two tabs arrives under two paths. The directory is
+// `org.chromium.Chromium.scoped_dir.XXXXXX` in current releases and
+// `.org.chromium.Chromium.XXXXXX` in older ones, with `com.google.Chrome`
+// for Chrome. Only the file inside it identifies the icon.
+var CHROMIUM_SCOPED_DIR = /\/\.?(?:org\.chromium\.Chromium|com\.google\.Chrome)\.(?:scoped_dir\.)?[A-Za-z0-9]{6}\//
+
+function duplicateKey(role, value) {
+  var text = String(value || "")
+  return role === "image" ? text.replace(CHROMIUM_SCOPED_DIR, "/chromium-scoped-dir/") : text
+}
+
 function isDuplicatePopup(row, snapshot) {
   if (!row || !snapshot || row.originalId === snapshot.originalId) return false
   for (var i = 0; i < DUPLICATE_ROLES.length; i++) {
     var role = DUPLICATE_ROLES[i]
-    if ((row[role] || "") !== (snapshot[role] || "")) return false
+    if (duplicateKey(role, row[role]) !== duplicateKey(role, snapshot[role])) return false
   }
   return true
 }
