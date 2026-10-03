@@ -21,7 +21,7 @@ if (( TOTAL == 0 )); then
 else
   # Get current background from symlink
   if [[ -L $CURRENT_BACKGROUND_LINK ]]; then
-    CURRENT_BACKGROUND=$(readlink "$CURRENT_BACKGROUND_LINK")
+    CURRENT_BACKGROUND=$(readlink -f "$CURRENT_BACKGROUND_LINK")
   else
     # Default to first background if no symlink exists
     CURRENT_BACKGROUND=""
@@ -30,7 +30,7 @@ else
   # Find current background index
   INDEX=-1
   for i in "${!BACKGROUNDS[@]}"; do
-    if [[ ${BACKGROUNDS[$i]} == "$CURRENT_BACKGROUND" ]]; then
+    if [[ $(readlink -f "${BACKGROUNDS[$i]}") == "$CURRENT_BACKGROUND" ]]; then
       INDEX=$i
       break
     fi

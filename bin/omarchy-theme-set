@@ -123,10 +123,11 @@ choose_theme_background() {
     if [[ $theme_path != $CURRENT_THEME_PATH && ${current_background%/*} == $current_theme_backgrounds ]]; then
       current_background="$theme_path/backgrounds/${current_background##*/}"
     fi
+    current_background=$(readlink -f "$current_background" 2>/dev/null || true)
 
     index=-1
     for i in "${!backgrounds[@]}"; do
-      if [[ ${backgrounds[$i]} == $current_background ]]; then
+      if [[ $(readlink -f "${backgrounds[$i]}") == "$current_background" ]]; then
         index=$i
         break
       fi
