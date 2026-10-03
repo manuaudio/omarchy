@@ -172,7 +172,9 @@ run_phase() {
   while (( SECONDS < deadline )) && (( $(alive_workers) > 0 )); do
     sleep 1
     after=$(device_sectors "$phase")
-    end_time=$EPOCHREALTIME
+    # EPOCHREALTIME renders with the locale's decimal separator, but awk only
+    # reads a period, so a comma would truncate the phase to whole seconds.
+    end_time=${EPOCHREALTIME/,/.}
     rate=$(awk -v before="$before" -v after="$after" 'BEGIN {
       if (after < before) print 0
       else print (after - before) * 512 / 1000000

@@ -22,8 +22,10 @@ Options:
 EOF
 }
 
+# EPOCHREALTIME renders with the locale's decimal separator, so drop every
+# non-digit rather than assuming a period.
 now_us() {
-  local now="${EPOCHREALTIME/./}"
+  local now="${EPOCHREALTIME//[!0-9]/}"
   printf '%s' "$now"
 }
 
