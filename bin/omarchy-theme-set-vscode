@@ -137,23 +137,25 @@ set_theme() {
 
   if [[ -n "$theme_name" ]]; then
     mkdir -p "$(dirname "$settings_path")"
-    [[ -f $settings_path ]] || printf '{\n}\n' >"$settings_path"
+    [[ -s $settings_path ]] || printf '{\n}\n' >"$settings_path"
 
     # settings.json is JSONC: comments and trailing commas are legal there and
     # common in practice, so it's edited in place rather than round-tripped
     # through a strict JSON parser that would reject it and reformat the rest.
+    # Only a key at the start of a line (or right after the opening brace,
+    # where it is inserted below) is live, so `//`-commented ones are skipped.
     local escaped=${theme_name//&/\\&}
     escaped=${escaped//|/\\|}
 
-    if ! grep -q '"workbench.colorTheme"' "$settings_path"; then
-      sed -i --follow-symlinks -E '0,/\{/{s/\{/{\ "workbench.colorTheme": "",/}' "$settings_path"
+    if ! grep -Eq '^[[:space:]]*(\{[[:space:]]*)?"workbench\.colorTheme"' "$settings_path"; then
+      sed -i --follow-symlinks -E '0,/^[[:space:]]*\{/{s/^([[:space:]]*)\{/\1{ "workbench.colorTheme": "",/}' "$settings_path"
     fi
 
     sed -i --follow-symlinks -E \
-      "s|(\"workbench.colorTheme\"[[:space:]]*:[[:space:]]*\")[^\"]*(\")|\1$escaped\2|" \
+      "s|^([[:space:]]*(\{[[:space:]]*)?\"workbench\.colorTheme\"[[:space:]]*:[[:space:]]*\")[^\"]*(\")|\1$escaped\3|" \
       "$settings_path"
   elif [[ -f $settings_path ]]; then
-    sed -i --follow-symlinks -E 's/\"workbench\.colorTheme\"[[:space:]]*:[^,}]*,?//' "$settings_path"
+    sed -i --follow-symlinks -E 's/^([[:space:]]*(\{[[:space:]]*)?)"workbench\.colorTheme"[[:space:]]*:[^,}]*,?/\1/' "$settings_path"
   fi
 }
 
