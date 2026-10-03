@@ -296,7 +296,11 @@ def link_shared(provider: str, home: Path) -> None:
   home.mkdir(parents=True, exist_ok=True)
   os.chmod(home, 0o700)
   for name in spec["shared_dirs"]:
-    (primary / name).mkdir(parents=True, exist_ok=True)
+    shared = primary / name
+    # A symlink here is the person's own setup, such as a dotfiles link, even
+    # when it points nowhere yet. mkdir would fail on a dangling one.
+    if not shared.is_symlink():
+      shared.mkdir(parents=True, exist_ok=True)
   for name in spec["shared_dirs"] + spec["shared_files"]:
     target = home / name
     if target.exists() or target.is_symlink():
@@ -328,7 +332,11 @@ def begin(provider: str) -> Path:
   pending.mkdir(parents=True, exist_ok=True)
   os.chmod(pending.parent, 0o700)
   home = Path(tempfile.mkdtemp(prefix="login-", dir=str(pending)))
-  link_shared(provider, home)
+  try:
+    link_shared(provider, home)
+  except Exception:
+    shutil.rmtree(home, ignore_errors=True)
+    raise
   return home
 
 
