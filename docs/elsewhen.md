@@ -1,6 +1,6 @@
 # Elsewhen
 
-A world clock for the Omarchy shell: a globe in the bar that opens a panel of clocks, one row per city, with a spinnable globe behind it. It lives in `shell/plugins/panels/elsewhen/` under the plugin id `omarchy.elsewhen`, and file names below are relative to that directory. Its checks live in `test/shell.d/elsewhen/` and run as part of `./test/shell` through `test/shell.d/elsewhen-test.sh`.
+A world clock for the Omarchy shell: a globe in the bar that opens a panel of clocks, one row per city, with a spinnable globe behind it. It lives in `shell/plugins/panels/elsewhen/` under the plugin id `omarchy.elsewhen`, and file names below are relative to that directory. Its checks are the `test/shell.d/elsewhen-*-test.sh` files, which `./test/shell` runs with the rest of the suite; `test/shell.d/elsewhen/` holds their fixtures: `solar.js` for the globe and sun checks, and the QML test the pointer check runs.
 
 Everything it needs is already on an Omarchy install: `date` and `timedatectl` for zone offsets, and `curl` for weather. Weather is the only thing that touches the network: [Open-Meteo](https://open-meteo.com) geocoding and forecasts, without an API key. The globe's coastlines are [Natural Earth](https://www.naturalearthdata.com) 110m (public domain), shipped as `world.json`. Settings live inline on the widget's `shell.json` entry; see [Settings](#settings).
 
