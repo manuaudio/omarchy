@@ -3,11 +3,26 @@
 # omarchy:summary=Install VS Code and configure Omarchy defaults for secrets, updates, and theme
 
 echo "Installing VSCode..."
-omarchy-pkg-add visual-studio-code-bin
+omarchy-pkg-add visual-studio-code-bin || exit 1
 
 mkdir -p ~/.vscode ~/.config/Code/User
 
-cat > ~/.vscode/argv.json << 'EOF'
+# An existing argv.json or settings.json belongs to the user, so only add a
+# missing key, using the same JSONC-safe in-place insert as omarchy-theme-set-vscode
+ensure_jsonc_key() {
+  local file="$1"
+  local key="$2"
+  local value="$3"
+
+  if ! grep -q "\"$key\"" "$file"; then
+    sed -i --follow-symlinks -E "0,/\{/{s/\{/{\n  \"$key\": $value,/}" "$file"
+  fi
+}
+
+if [[ -f ~/.vscode/argv.json ]]; then
+  ensure_jsonc_key ~/.vscode/argv.json password-store '"gnome-libsecret"'
+else
+  cat > ~/.vscode/argv.json << 'EOF'
 // This configuration file allows you to pass permanent command line arguments to VS Code.
 // Only a subset of arguments is currently supported to reduce the likelihood of breaking
 // the installation.
@@ -19,9 +34,14 @@ cat > ~/.vscode/argv.json << 'EOF'
   "password-store":"gnome-libsecret"
 }
 EOF
+fi
 
 # Ensure VSC's own auto-update feature is turned off
-printf '{\n  "update.mode": "none"\n}\n' > ~/.config/Code/User/settings.json
+if [[ -f ~/.config/Code/User/settings.json ]]; then
+  ensure_jsonc_key ~/.config/Code/User/settings.json update.mode '"none"'
+else
+  printf '{\n  "update.mode": "none"\n}\n' > ~/.config/Code/User/settings.json
+fi
 
 # Apply Omarchy theme to VSCode
 omarchy-theme-set-vscode
