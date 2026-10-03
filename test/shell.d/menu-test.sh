@@ -187,6 +187,22 @@ assertEqual(menu.resolveRoute(routed.items, routed.itemOrder, 'power_menu'), 'sy
 assertEqual(menu.resolveRoute(routed.items, routed.itemOrder, ''), 'root', 'menu routes empty input to root')
 assertEqual(menu.resolveRoute(routed.items, routed.itemOrder, 'no-such-route'), 'no-such-route', 'menu falls through to the literal input')
 assert(menu.matchesQuery(routed.items['apps.htop'], 'system', true), 'menu still finds an app by its keywords in search')
+assertEqual(menu.resolveRoute(routed.items, routed.itemOrder, 'go'), 'root', 'menu routes go to root')
+assertEqual(menu.resolveRoute(routed.items, routed.itemOrder, 'menu'), 'root', 'menu routes menu to root')
+assertEqual(menu.resolveRoute(routed.items, routed.itemOrder, 'No_Such_Route'), 'No_Such_Route', 'menu falls through to the unnormalized literal input')
+
+// Extension submenus keep whatever id the user gave them, so a route must
+// reach an exact id before underscores and case are normalised for aliases.
+const extended = {
+  items: Object.assign({}, routed.items, {
+    dev_tools: { id: 'dev_tools', parent: 'root', label: 'Dev Tools' },
+    Personal: { id: 'Personal', parent: 'root', label: 'Personal' }
+  }),
+  itemOrder: routed.itemOrder.concat(['dev_tools', 'Personal'])
+}
+assertEqual(menu.resolveRoute(extended.items, extended.itemOrder, 'dev_tools'), 'dev_tools', 'menu routes an extension id containing underscores literally')
+assertEqual(menu.resolveRoute(extended.items, extended.itemOrder, 'Personal'), 'Personal', 'menu routes a capitalised extension id literally')
+assertEqual(menu.resolveRoute(extended.items, extended.itemOrder, 'power_menu'), 'system', 'menu still normalises aliases alongside literal extension ids')
 assert(
   /function resolveRoute\(input\) \{\s*\n\s*return MenuModel\.resolveRoute\(root\.items, root\.itemOrder, input\)\s*\n\s*\}/.test(menuQml),
   'menu delegates route resolution to the shared model'
