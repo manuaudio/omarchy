@@ -55,7 +55,7 @@ if script -qec true /dev/null >/dev/null 2>&1; then
   output=$(run_orphan_checker_tty | tr -d '\r') || status=$?
   (( status == 0 )) || fail "orphan checker exits 0 when pacman -Rns fails or is declined" "$output"
   grep -qF "were not removed" <<<"$output" || fail "orphan checker reports orphans left in place" "$output"
-  grep -qF "omarchy update orphan-pkgs" <<<"$output" || fail "orphan checker names the route to review orphans later" "$output"
+  grep -qF "omarchy update orphan pkgs" <<<"$output" || fail "orphan checker names the route to review orphans later" "$output"
   pass "orphan checker treats a failed or declined pacman removal as non-fatal"
 
   write_stub pacman 'if [[ $1 == "-Qtdq" ]]; then printf "old-lib\nunused-tool\n"; exit 0; fi; [[ $1 == "-Rns" ]] && exit 0; exit 1'

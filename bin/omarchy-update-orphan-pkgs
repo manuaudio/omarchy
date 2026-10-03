@@ -27,6 +27,6 @@ fi
 echo -e "\e[32m\nRemoving orphan system packages\e[0m"
 # Declining pacman's own prompt or a failed removal must not abort the update.
 if ! sudo pacman -Rns "${orphans[@]}"; then
-  echo -e "\e[33mOrphaned packages were not removed. Review them later with: omarchy update orphan-pkgs\e[0m"
+  echo -e "\e[33mOrphaned packages were not removed. Review them later with: omarchy update orphan pkgs\e[0m"
 fi
 echo
