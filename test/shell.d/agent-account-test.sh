@@ -143,6 +143,22 @@ work="$accounts/claude/work"
 [[ -z $(find "$accounts/claude/.pending" -mindepth 1 -print -quit 2>/dev/null) ]] || fail "adding an account leaves no pending login behind"
 pass "an added account shares everything but its login with the primary"
 
+# A shared folder that isn't a folder at all (here a regular file) is still an
+# error, and the half-made login home is cleaned up rather than left behind.
+mv "$HOME/.claude/commands" "$test_tmp/commands-dir" 2>/dev/null || true
+touch "$HOME/.claude/commands"
+if OMARCHY_TEST_LOGIN_UUID=u-broken OMARCHY_TEST_LOGIN_EMAIL=broken@example.com \
+  omarchy-agent-account-add claude Broken </dev/null >"$test_tmp/broken-output" 2>&1; then
+  fail "a shared folder that is a file stops the add"
+fi
+[[ -z $(find "$accounts/claude/.pending" -mindepth 1 -print -quit 2>/dev/null) ]] ||
+  fail "a failed account setup leaves no pending login behind" "$(ls -A "$accounts/claude/.pending")"
+rm "$HOME/.claude/commands"
+if [[ -d $test_tmp/commands-dir ]]; then
+  mv "$test_tmp/commands-dir" "$HOME/.claude/commands"
+fi
+pass "a failed account setup is refused and cleans up after itself"
+
 if OMARCHY_TEST_LOGIN_UUID=u-work OMARCHY_TEST_LOGIN_EMAIL=work@example.com \
   omarchy-agent-account-add claude Again </dev/null >"$test_tmp/dup-output" 2>&1; then
   fail "adding the same account twice fails"
