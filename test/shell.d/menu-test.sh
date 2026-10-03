@@ -99,6 +99,28 @@ assert(menu.isVisible(visibilityItems, visibilityOrder, { 'hardware.laptop': tru
 assert(!menu.isVisible(visibilityItems, visibilityOrder, { 'nested.branch.leaf': false }, visibilityItems.nested), 'menu hides recursively empty submenus')
 assert(menu.isVisible(visibilityItems, visibilityOrder, {}, visibilityItems.dynamic), 'menu keeps provider-backed submenus visible')
 
+// A link into a provider-backed submenu has no static children to count before
+// the provider has run, so it must stay visible on the target's provider alone,
+// and so must a submenu holding nothing but such links.
+const linked = menu.mergeMenuSources(menu.parseMenuJsonc(`{
+  "items": {
+    "apps": { "label": "Apps", "provider": "apps" },
+    "hidden": { "label": "Hidden", "provider": "items", "when": "has-hidden" },
+    "empty": { "label": "Empty" },
+    "quick": { "label": "Quick" },
+    "quick.apps": { "label": "All apps", "target": "apps" },
+    "dead": { "label": "Dead" },
+    "dead.empty": { "label": "Nothing", "target": "empty" },
+    "gone": { "label": "Gone" },
+    "gone.hidden": { "label": "Hidden", "target": "hidden" }
+  }
+}`), [])
+assert(menu.isVisible(linked.items, linked.itemOrder, {}, linked.items['quick.apps']), 'menu shows a link to a provider-backed submenu before its rows load')
+assert(menu.isVisible(linked.items, linked.itemOrder, {}, linked.items.quick), 'menu shows a submenu holding only links to provider-backed submenus')
+assert(!menu.isVisible(linked.items, linked.itemOrder, {}, linked.items['dead.empty']), 'menu hides a link to an empty submenu')
+assert(!menu.isVisible(linked.items, linked.itemOrder, {}, linked.items.dead), 'menu hides a submenu holding only links to empty submenus')
+assert(!menu.isVisible(linked.items, linked.itemOrder, { hidden: false }, linked.items['gone.hidden']), 'menu hides a link to a provider-backed submenu whose when: failed')
+
 // `disabled:` is the softer guard: the row stays listed and only loses the
 // cursor, which is how an already-installed app keeps its place in Install.
 const installed = menu.normalizeItem('install.browser.zen', { label: 'Zen', disabled: 'omarchy-pkg-present zen-browser-bin', action: 'install-zen' })

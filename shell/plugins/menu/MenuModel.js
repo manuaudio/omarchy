@@ -261,11 +261,15 @@ function isVisible(items, itemOrder, whenResults, entry, depth) {
   var guard = depth || 0
   if (guard >= 32) return false
 
-  var target = entry.kind === "link" ? entry.target : entry.id
+  // A link shows whatever its target shows: a provider-backed target has no
+  // static children until its provider has run, and a target hidden by its
+  // own `when:` takes the link with it.
+  if (entry.kind === "link") return isVisible(items, itemOrder, whenResults, item(items, entry.target), guard + 1)
+
   var order = Array.isArray(itemOrder) ? itemOrder : []
   for (var i = 0; i < order.length; i++) {
     var child = item(items, order[i])
-    if (child && child.parent === target && isVisible(items, itemOrder, whenResults, child, guard + 1)) return true
+    if (child && child.parent === entry.id && isVisible(items, itemOrder, whenResults, child, guard + 1)) return true
   }
 
   return false
