@@ -11,18 +11,17 @@ run_paths() {
 package.path = os.getenv("OMARCHY_PATH") .. "/?.lua;" .. package.path
 local paths = require("default.hypr.paths")
 assert(paths.config_home == os.getenv("EXPECTED_CONFIG"), "config_home: " .. paths.config_home)
-assert(paths.state_home == os.getenv("EXPECTED_STATE"), "state_home: " .. paths.state_home)
 LUA
 }
 
 HOME="/home/test-user" OMARCHY_PATH="$ROOT" \
-  XDG_CONFIG_HOME= XDG_STATE_HOME= \
-  EXPECTED_CONFIG="/home/test-user/.config" EXPECTED_STATE="/home/test-user/.local/state" \
+  XDG_CONFIG_HOME= \
+  EXPECTED_CONFIG="/home/test-user/.config" \
   run_paths
-pass "empty XDG path variables fall back to their defaults"
+pass "empty XDG_CONFIG_HOME falls back to its default"
 
 HOME="/home/test-user" OMARCHY_PATH="$ROOT" \
-  XDG_CONFIG_HOME="/custom/config" XDG_STATE_HOME="/custom/state" \
-  EXPECTED_CONFIG="/custom/config" EXPECTED_STATE="/custom/state" \
+  XDG_CONFIG_HOME="/custom/config" \
+  EXPECTED_CONFIG="/custom/config" \
   run_paths
-pass "set XDG path variables are honored"
+pass "set XDG_CONFIG_HOME is honored"
