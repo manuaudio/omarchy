@@ -349,7 +349,7 @@ Use that full path. `/usr/bin/qmltestrunner` is the Qt5 binary; it exits 0 havin
 | `Space` | opens the globe, and closes it again |
 | `+` | opens the city search, or the globe's jump box when the globe is up |
 | `a` | opens the city search (list only) |
-| `j` | opens the globe's jump box (globe only) |
+| `/` | opens the globe's jump box (globe only) |
 | `r` | re-probes the zones and refetches the weather |
 | `Esc` | closes the search, then leaves the globe, then closes the panel |
 | arrows, Return | walk and pick a search result |

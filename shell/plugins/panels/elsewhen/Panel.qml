@@ -757,7 +757,8 @@ Panel {
         else if (!fromReturn && root.globeEnabled) root.setGlobeMode(!root.globeMode, false)
       }
       onTabRequested: function(direction) { root.switchPanel(direction) }
-      // "+" searches in either view; "j" jumps on the globe, "a" adds on the list.
+      // "+" searches in either view; "/" jumps on the globe, "a" adds on the list.
+      // Not "j": the key catcher keeps j, k, h, l and x for moving and deleting.
       // "t" flips 24-hour and AM/PM time, like clicking a row's time, and Alt+T
       // flips Fahrenheit and Celsius, like clicking a temperature.
       onTextKey: function(text, modifiers) {
@@ -765,7 +766,7 @@ Panel {
         if (key === "r") root.refresh()
         else if (key === "t" && (modifiers & Qt.AltModifier)) root.toggleUnits()
         else if (key === "t") root.toggleHour24()
-        else if (root.globeMode && (key === "+" || key === "j")) {
+        else if (root.globeMode && (key === "+" || key === "/")) {
           if (globeLoader.item) globeLoader.item.startJump()
         } else if (!root.globeMode && (key === "+" || key === "a")) {
           root.startAdding()
