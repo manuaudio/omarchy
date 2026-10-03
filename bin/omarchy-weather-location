@@ -9,6 +9,9 @@
 #
 #   (no args)           the current location: the stored name, or the
 #                       IP-detected city when nothing is set
+#   --query             the wttr.in path segment for the stored location:
+#                       "lat,lon" when coordinates are stored, else the
+#                       URL-encoded name; empty means IP auto-detect
 #   --set <name> [lat,lon]  store a location
 #   --clear             return to IP auto-detect
 
@@ -25,6 +28,15 @@ case "${1:-}" in
   fi
   [[ -n $name ]] && echo "$name"
   ;;
+--query)
+  [[ -f $LOC_FILE ]] && jq -r '
+    if (.latitude | type) == "number" and (.longitude | type) == "number" then
+      "\(.latitude),\(.longitude)"
+    else
+      .name // "" | if type == "string" then gsub("^\\s+|\\s+$"; "") | select(. != "") | @uri else empty end
+    end
+  ' "$LOC_FILE" 2>/dev/null
+  ;;
 --set)
   [[ -n ${2:-} ]] || { echo "Usage: omarchy-weather-location --set <name> [lat,lon]" >&2; exit 1; }
   if [[ -n ${3:-} ]]; then
@@ -40,7 +52,7 @@ case "${1:-}" in
   rm -f "$LOC_FILE"
   ;;
 *)
-  echo "Usage: omarchy-weather-location [--set <name> [lat,lon]|--clear]" >&2
+  echo "Usage: omarchy-weather-location [--query|--set <name> [lat,lon]|--clear]" >&2
   exit 1
   ;;
 esac

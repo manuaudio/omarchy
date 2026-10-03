@@ -9,7 +9,9 @@ if [[ -z $place ]]; then
   exit 1
 fi
 
-query=$(jq -rn --arg place "$place" '$place | @uri')
+# Query by the stored coordinates when present, so an ambiguous name reports
+# the same city the weather panel shows. Empty means IP auto-detect.
+query=$(omarchy-weather-location --query 2>/dev/null)
 weather=$(curl -fsS --max-time 4 "https://wttr.in/${query}?format=%t|%w" 2>/dev/null | tr -d '\n')
 
 if [[ -z $weather ]]; then

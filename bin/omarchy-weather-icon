@@ -2,14 +2,9 @@
 
 # omarchy:summary=Returns a weather condition icon, adjusted for live sunrise and sunset.
 
-# Only consult the helper when a location is stored. Its dynamic fallback would
-# cost an extra wttr.in request when nothing is set; the bare j1 fetch already
-# auto-detects by IP.
-query=""
-if [[ -s "$HOME/.local/state/omarchy/settings/weather.json" ]]; then
-  location=$(omarchy-weather-location 2>/dev/null)
-  [[ -n $location ]] && query=$(jq -rn --arg location "$location" '$location | @uri')
-fi
+# Query by the stored coordinates when present, else the stored name. Empty
+# means nothing is stored; the bare j1 fetch then auto-detects by IP.
+query=$(omarchy-weather-location --query 2>/dev/null)
 
 weather_data=$(curl -fsS --max-time 3 "https://wttr.in/${query}?format=j1" 2>/dev/null | jq -er '[.current_condition[0].weatherCode, .weather[0].astronomy[0].sunrise, .weather[0].astronomy[0].sunset] | select(all(. != null and . != "")) | @tsv' 2>/dev/null) || exit 1
 

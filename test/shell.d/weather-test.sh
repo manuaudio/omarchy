@@ -182,3 +182,39 @@ pass "weather location rejects malformed coordinates"
 weather_location --clear
 [[ ! -e "$test_tmp/.local/state/omarchy/settings/weather.json" ]] || fail "weather location clear removes the state file"
 pass "weather location clear removes the state file"
+
+# The bar notification and icon must ask wttr.in for the same place the panel
+# shows: coordinates when stored, so an ambiguous name like Portland is not
+# resolved to a different city.
+mkdir -p "$test_tmp/bin"
+cat >"$test_tmp/bin/curl" <<'STUB'
+#!/bin/bash
+printf '%s\n' "${@: -1}" >>"$CURL_LOG"
+STUB
+chmod +x "$test_tmp/bin/curl"
+
+weather_requests() {
+  local log="$test_tmp/curl.log"
+  : >"$log"
+  HOME="$test_tmp" CURL_LOG="$log" PATH="$test_tmp/bin:$ROOT/bin:$PATH" "$ROOT/bin/omarchy-weather-status" >/dev/null 2>&1 || true
+  HOME="$test_tmp" CURL_LOG="$log" PATH="$test_tmp/bin:$ROOT/bin:$PATH" "$ROOT/bin/omarchy-weather-icon" >/dev/null 2>&1 || true
+  cat "$log"
+}
+
+weather_location --set "Portland" "43.6591,-70.2568"
+requests=$(weather_requests)
+[[ $requests == $'https://wttr.in/43.6591,-70.2568?format=%t|%w\nhttps://wttr.in/43.6591,-70.2568?format=j1' ]] || fail "weather status and icon query stored coordinates (got: $requests)"
+pass "weather status and icon query stored coordinates"
+
+weather_location --set "Portland"
+requests=$(weather_requests)
+[[ $requests == $'https://wttr.in/Portland?format=%t|%w\nhttps://wttr.in/Portland?format=j1' ]] || fail "weather status and icon query a name-only location by name (got: $requests)"
+pass "weather status and icon query a name-only location by name"
+
+weather_location --set "New York"
+[[ $(weather_location --query) == "New%20York" ]] || fail "weather location query URL-encodes a name-only location"
+pass "weather location query URL-encodes a name-only location"
+
+weather_location --clear
+[[ -z $(weather_location --query) ]] || fail "weather location query is empty for IP auto-detect"
+pass "weather location query is empty for IP auto-detect"
