@@ -300,7 +300,10 @@ Panel {
     if (!name) return
     if (enabled && root.enabledDisplayCount <= 1) return
 
-    actionProc.command = ["hyprctl", "keyword", "monitor", name + (enabled ? ",disable" : ",preferred,auto,auto")]
+    var command = Model.displayToggleCommand(name, enabled)
+    if (command.length === 0) return
+
+    actionProc.command = command
     if (!actionProc.running) actionProc.running = true
   }
 

@@ -111,6 +111,19 @@ function parseDisplays(raw) {
   }
 }
 
+// Quattro's Lua parser rejects `hyprctl keyword`, so outputs change through
+// `hyprctl eval`. The name is written into Lua, so only a plain connector name
+// may pass; anything else gets no command.
+function displayToggleCommand(name, enabled) {
+  var output = String(name || "")
+  if (!/^[A-Za-z0-9._-]+$/.test(output)) return []
+
+  var config = enabled
+    ? "hl.monitor({ output = \"" + output + "\", disabled = true })"
+    : "hl.monitor({ output = \"" + output + "\", mode = \"preferred\", position = \"auto\", scale = \"auto\" })"
+  return ["hyprctl", "eval", config]
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     clampBrightness: clampBrightness,
@@ -119,6 +132,7 @@ if (typeof module !== "undefined") {
     matchingScaleIndex: matchingScaleIndex,
     availableScales: availableScales,
     brightnessName: brightnessName,
-    parseDisplays: parseDisplays
+    parseDisplays: parseDisplays,
+    displayToggleCommand: displayToggleCommand
   }
 }

@@ -75,4 +75,29 @@ assertDeepEqual(
 )
 
 assertDeepEqual(monitor.parseDisplays('{'), { displays: [], enabledDisplayCount: 0 }, 'monitor handles invalid display JSON')
+
+assertDeepEqual(
+  monitor.displayToggleCommand('HDMI-A-1', true),
+  ['hyprctl', 'eval', 'hl.monitor({ output = "HDMI-A-1", disabled = true })'],
+  'monitor disables a display through hyprctl eval'
+)
+assertDeepEqual(
+  monitor.displayToggleCommand('eDP-1', false),
+  ['hyprctl', 'eval', 'hl.monitor({ output = "eDP-1", mode = "preferred", position = "auto", scale = "auto" })'],
+  'monitor enables a display through hyprctl eval'
+)
+assertDeepEqual(monitor.displayToggleCommand('DP-1", disabled = true }) os.execute("x', true), [], 'monitor refuses a display name that would escape the Lua string')
+assertDeepEqual(monitor.displayToggleCommand('', true), [], 'monitor refuses an empty display name')
 JS
+
+panel="$ROOT/shell/plugins/panels/monitor/Panel.qml"
+if grep -q '"hyprctl", "keyword"' "$panel"; then
+  fail "monitor panel avoids hyprctl keyword" "Quattro's Lua parser rejects hyprctl keyword"
+else
+  pass "monitor panel avoids hyprctl keyword"
+fi
+if grep -q 'Model.displayToggleCommand(name, enabled)' "$panel"; then
+  pass "monitor panel toggles displays through the Lua-safe command"
+else
+  fail "monitor panel toggles displays through the Lua-safe command"
+fi
