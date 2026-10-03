@@ -40,6 +40,25 @@ grep -Fxq 'Exec=omarchy-launch-webapp "https://example.org/app"' "$(desktop_for 
   fail "webapp install stores the prefixed https URL" "$(cat "$(desktop_for Plain)")"
 pass "webapp install prefixes a schemeless URL with https"
 
+# A host with a port reads like scheme:rest, so a self-hosted app typed without
+# a scheme was refused as a non-http(s) URL.
+for case in \
+  "localhost:3000|https://localhost:3000" \
+  "homeassistant.local:8123/lovelace|https://homeassistant.local:8123/lovelace" \
+  "http://x:8080|http://x:8080"; do
+  url=${case%%|*}
+  expected=${case#*|}
+  if install_webapp "Port" "$url" "webapp" >"$tmpdir/out" 2>"$tmpdir/err"; then
+    :
+  else
+    fail "webapp install accepts '$url'" "$(cat "$tmpdir/err")"
+  fi
+  grep -Fxq "Exec=omarchy-launch-webapp \"$expected\"" "$(desktop_for Port)" ||
+    fail "webapp install stores '$expected' for '$url'" "$(cat "$(desktop_for Port)")"
+  rm -f "$(desktop_for Port)"
+done
+pass "webapp install prefixes a schemeless host:port URL with https"
+
 if install_webapp "Local" "https://localhost:47990" "webapp" "omarchy-launch-webapp https://localhost:47990 --ignore-certificate-errors" >"$tmpdir/out" 2>"$tmpdir/err"; then
   :
 else
@@ -49,7 +68,7 @@ grep -Fxq 'Exec=omarchy-launch-webapp https://localhost:47990 --ignore-certifica
   fail "webapp install writes the custom exec" "$(cat "$(desktop_for Local)")"
 pass "webapp install keeps a custom https exec"
 
-for url in "javascript:alert(1)" "file:///etc/passwd" "data:text/html,hi" "ftp://example.com" "ext://x"; do
+for url in "javascript:alert(1)" "file:///etc/passwd" "data:text/html,hi" "ftp://example.com" "ext://x" "foo:3000bar"; do
   if install_webapp "Bad" "$url" "webapp" >"$tmpdir/out" 2>"$tmpdir/err"; then
     fail "webapp install refuses '$url'"
   fi

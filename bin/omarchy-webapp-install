@@ -56,10 +56,14 @@ download_icon() {
 
 # Chromium --app= treats javascript:, file:, and data: as a document to
 # run. Prefix schemeless input with https as before, then refuse anything
-# that is not http(s).
+# that is not http(s). A host with a port (localhost:3000,
+# homeassistant.local:8123/lovelace) also looks like scheme:rest, so treat
+# digits-only after the colon, up to a path, query, fragment, or the end, as a
+# port. Prefixing only ever produces an https URL, so it cannot let a scheme
+# through.
 normalize_webapp_url() {
   local url=$1
-  if [[ ! $url =~ ^[a-zA-Z][a-zA-Z0-9+.-]*: ]]; then
+  if [[ ! $url =~ ^[a-zA-Z][a-zA-Z0-9+.-]*: || $url =~ ^[a-zA-Z0-9.-]+:[0-9]+([/?#]|$) ]]; then
     url="https://$url"
   fi
   printf '%s' "$url"
