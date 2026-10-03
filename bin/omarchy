@@ -186,6 +186,7 @@ register_command() {
   local fallback_summary=""
   local has_summary="false"
   local metadata_errors=""
+  local -A metadata_seen=()
 
   while IFS= read -r line && (( line_count < METADATA_SCAN_LIMIT )); do
     line_count=$((line_count + 1))
@@ -207,6 +208,12 @@ register_command() {
       metadata_value="${BASH_REMATCH[2]}"
       metadata_value="${metadata_value%$'\r'}"
       metadata_value="${metadata_value//$'\t'/ }"
+
+      # A repeated key silently overwrites the earlier value, so flag it for --check.
+      if [[ -n ${metadata_seen[$metadata_key]-} ]]; then
+        metadata_errors=$(append_pipe_value "$metadata_errors" "$metadata_key is repeated; only the last line is kept")
+      fi
+      metadata_seen["$metadata_key"]="true"
 
       case "$metadata_key" in
       group)

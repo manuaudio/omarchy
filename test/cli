@@ -75,6 +75,9 @@ pass "JSON uses binary/routes and omits legacy/usage/extra metadata"
 "$CLI" commands --check >/dev/null
 pass "commands --check passes"
 
+"$CLI" commands --json | jq -e '.commands[] | select(.binary == "omarchy-theme-install") | .examples == ["omarchy theme install https://github.com/example/omarchy-example-theme.git", "omarchy theme install git@github.com:example/omarchy-example-theme.git"]' >/dev/null
+pass "theme install exposes both https and git@ examples"
+
 "$CLI" commands --all >/dev/null
 pass "commands --all does not crash"
 
@@ -644,6 +647,8 @@ while IFS= read -r binary_path; do
   ! grep -q '^# omarchy:args=$' <<<"$header" || fail "metadata does not include empty args: $binary_path"
   ! grep -Eq '^# omarchy:(legacy|usage|visibility|mutates|interactive)=' <<<"$header" || fail "metadata avoids removed fields: $binary_path"
   ! grep -Eq '^# omarchy:requires-sudo=false$' <<<"$header" || fail "metadata omits false booleans: $binary_path"
+  repeated_keys=$(grep -oE '^[[:space:]]*#[[:space:]]*omarchy:[[:alnum:]_-]+=' <<<"$header" | sed -E 's/^[[:space:]]*#[[:space:]]*//' | sort | uniq -d || true)
+  [[ -z $repeated_keys ]] || fail "metadata does not repeat keys ($repeated_keys): $binary_path"
 done < <(find "$ROOT/bin" -maxdepth 1 -type f -executable -name 'omarchy-*' | sort)
 pass "all executable bins have slim self-documenting metadata"
 
@@ -696,6 +701,24 @@ assert_output_contains "partial metadata command dispatches" "$output" "partial-
 
 output=$("$TMPDIR/omarchy" body metadata test)
 assert_output_contains "body metadata command dispatches by filename" "$output" "body-metadata-ok"
+
+make_tmpdir REPEAT_TMPDIR
+ln -s "$CLI" "$REPEAT_TMPDIR/omarchy"
+
+{
+  printf '#!/bin/bash\n\n'
+  printf '# omarchy:summary=Repeats a metadata key\n'
+  printf '# omarchy:examples=omarchy repeat test one\n'
+  printf '# omarchy:examples=omarchy repeat test two\n'
+  printf 'echo repeat-ok\n'
+} >"$REPEAT_TMPDIR/omarchy-repeat-test"
+chmod +x "$REPEAT_TMPDIR/omarchy-repeat-test"
+
+if output=$("$REPEAT_TMPDIR/omarchy" commands --check 2>&1); then
+  printf 'Actual output:\n%s\n' "$output" >&2
+  fail "commands --check rejects repeated metadata keys"
+fi
+assert_output_contains "commands --check rejects repeated metadata keys" "$output" "Invalid metadata in omarchy-repeat-test: examples is repeated"
 
 # A trailing --help must render help even when the route only partially
 # resolves, leaving unresolved words ahead of the flag (e.g. `update aur --help`
