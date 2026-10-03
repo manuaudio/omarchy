@@ -20,13 +20,17 @@ if [[ $1 == "-e" ]]; then
 fi
 
 if [[ $1 == "-i" ]]; then
-  cat <<'INFO'
+  # upower formats numbers for the session locale: a decimal-comma locale
+  # prints 2,5 where the C locale prints 2.5.
+  decimal=.
+  [[ ${LC_ALL:-${LC_NUMERIC:-${LANG:-}}} == de_DE* ]] && decimal=,
+  cat <<INFO
   native-path:          BAT0
   state:                discharging
-  energy:               28.3 Wh
-  energy-full:          56.7 Wh
-  energy-rate:          7.3 W
-  time to empty:        2.5 hours
+  energy:               28${decimal}3 Wh
+  energy-full:          56${decimal}7 Wh
+  energy-rate:          7${decimal}3 W
+  time to empty:        2${decimal}5 hours
   percentage:           51%
 INFO
   exit 0
@@ -43,6 +47,11 @@ grep -Fx $'state\tdischarging' <<<"$shell_output" >/dev/null || fail "battery st
 grep -Fx $'rate\t10.8W' <<<"$shell_output" >/dev/null || fail "battery status reports live sysfs power rate"
 grep -Fx $'size\t56Wh' <<<"$shell_output" >/dev/null || fail "battery status reports full capacity"
 grep -Fx $'time\t2h 30m' <<<"$shell_output" >/dev/null || fail "battery status reports remaining time"
+
+shell_output=$(env -u LC_ALL LC_NUMERIC=de_DE.UTF-8 OMARCHY_POWER_SUPPLY_PATH="$tmp_dir/power" PATH="$tmp_dir/bin:$PATH" "$ROOT/bin/omarchy-battery-status" --shell)
+grep -Fx $'time\t2h 30m' <<<"$shell_output" >/dev/null ||
+  fail "battery status keeps the minutes of a remaining time upower prints with a decimal comma" "$shell_output"
+pass "battery status keeps the minutes of a remaining time upower prints with a decimal comma"
 
 if matches=$(rg -n 'omarchy-battery-(capacity|remaining|remaining-time)' "$ROOT/bin" "$ROOT/test" "$ROOT/shell" "$ROOT/docs"); then
   fail "battery status owns capacity and remaining calculations" "$matches"

@@ -21,7 +21,9 @@ esac
 battery=$(upower -e 2>/dev/null | grep BAT | head -n 1)
 [[ -z $battery ]] && exit 0
 
-battery_info=$(upower -i "$battery")
+# upower prints its numbers in the session locale, so a decimal-comma locale
+# turns "2.5 hours" into "2,5 hours", which awk reads as 2. Ask for C numbers.
+battery_info=$(LC_ALL=C upower -i "$battery")
 
 percentage=$(awk '/percentage/ { print int($2); exit }' <<<"$battery_info")
 capacity=$(awk '/energy-full:/ { printf "%d", $2; exit }' <<<"$battery_info")
