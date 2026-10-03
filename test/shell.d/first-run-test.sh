@@ -40,29 +40,49 @@ echo "$*" >>"$OMARCHY_TEST_GSETTINGS_LOG"
 SH
 chmod +x "$mock_bin/gsettings"
 
+# Runs the first-run GNOME step for a theme and prints the gsettings calls it
+# made. Returns the step's own exit status so a failing sync fails the test.
+# Pass an empty bus address as the second argument to run without a bus.
 run_first_run_gnome_theme() {
   local theme="$1"
+  local bus="${2-unix:path=$test_tmp/bus}"
   local theme_home="$test_tmp/gnome-$theme"
+  local env_args=(HOME="$theme_home" PATH="$mock_bin:$ROOT/bin:$PATH" OMARCHY_PATH="$ROOT" OMARCHY_TEST_GSETTINGS_LOG="$theme_home/gsettings.log")
+  local status
 
+  rm -rf "$theme_home"
   mkdir -p "$theme_home/.local/state/omarchy/current"
   ln -snf "$ROOT/themes/$theme" "$theme_home/.local/state/omarchy/current/theme"
 
-  HOME="$theme_home" PATH="$mock_bin:$ROOT/bin:$PATH" OMARCHY_PATH="$ROOT" \
-    DBUS_SESSION_BUS_ADDRESS="unix:path=$test_tmp/bus" OMARCHY_TEST_GSETTINGS_LOG="$theme_home/gsettings.log" \
-    bash "$ROOT/install/user/first-run/gnome-theme.sh"
-  cat "$theme_home/gsettings.log"
+  if [[ -n $bus ]]; then
+    env_args+=(DBUS_SESSION_BUS_ADDRESS="$bus")
+  fi
+
+  env -u DBUS_SESSION_BUS_ADDRESS "${env_args[@]}" bash "$ROOT/install/user/first-run/gnome-theme.sh" >"$theme_home/output" 2>&1
+  status=$?
+  if [[ -f $theme_home/gsettings.log ]]; then
+    cat "$theme_home/gsettings.log"
+  fi
+  return $status
 }
 
-gsettings_calls=$(run_first_run_gnome_theme tokyo-night)
+gsettings_calls=$(run_first_run_gnome_theme tokyo-night) || fail "first-run GNOME theme succeeds with a session bus" "$gsettings_calls"
 grep -Fx 'set org.gnome.desktop.interface icon-theme Yaru-magenta' <<<"$gsettings_calls" >/dev/null ||
   fail "first-run GNOME theme applies the current theme's icons" "$gsettings_calls"
 grep -Fx 'set org.gnome.desktop.interface color-scheme prefer-dark' <<<"$gsettings_calls" >/dev/null ||
   fail "first-run GNOME theme keeps dark themes dark" "$gsettings_calls"
 
-gsettings_calls=$(run_first_run_gnome_theme catppuccin-latte)
+gsettings_calls=$(run_first_run_gnome_theme catppuccin-latte) || fail "first-run GNOME theme succeeds with a session bus" "$gsettings_calls"
 grep -Fx 'set org.gnome.desktop.interface color-scheme prefer-light' <<<"$gsettings_calls" >/dev/null ||
   fail "first-run GNOME theme applies light mode for light themes" "$gsettings_calls"
 grep -Fx 'set org.gnome.desktop.interface gtk-theme Adwaita' <<<"$gsettings_calls" >/dev/null ||
   fail "first-run GNOME theme uses the light GTK theme for light themes" "$gsettings_calls"
 
 pass "first-run GNOME theme follows the current theme"
+
+if gsettings_calls=$(run_first_run_gnome_theme tokyo-night ""); then
+  fail "first-run GNOME theme fails without a session bus so first-run retries" "$gsettings_calls"
+fi
+[[ -z $gsettings_calls ]] || fail "first-run GNOME theme writes no gsettings without a session bus" "$gsettings_calls"
+
+pass "first-run GNOME theme retries when no session bus is available"
