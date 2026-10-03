@@ -15,4 +15,6 @@ sudo usermod -aG nordvpn "$USER"
 echo -e "\nNordVPN installed! After reboot, run 'nordvpn login' to authenticate."
 
 echo
-gum confirm "Reboot now to make NordVPN usable?" && omarchy-system-reboot
+if gum confirm "Reboot now to make NordVPN usable?"; then
+  omarchy-system-reboot
+fi
