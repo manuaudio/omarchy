@@ -76,3 +76,42 @@ for tpl in "$ROOT"/default/themed/*.tpl; do
   [[ -f $next/$name ]] || fail "every built-in template renders ($name)"
 done
 pass "theme templates render every built-in template"
+
+# A theme that only defines ANSI colors falls back to color4 for its accent,
+# like the shell does, instead of leaving `{{ accent }}` in generated configs.
+ansi_home="$test_tmp/ansi-home"
+ansi_next="$ansi_home/.local/state/omarchy/current/next-theme"
+mkdir -p "$ansi_next"
+
+cat >"$ansi_next/colors.toml" <<'EOF2'
+background = "#101010"
+foreground = "#d0d0d0"
+color0 = "#101010"
+color1 = "#cc0000"
+color2 = "#00cc00"
+color3 = "#cccc00"
+color4 = "#3366ff"
+color5 = "#cc00cc"
+color6 = "#00cccc"
+color7 = "#d0d0d0"
+color8 = "#606060"
+color9 = "#ff3333"
+color10 = "#33ff33"
+color11 = "#ffff33"
+color12 = "#6699ff"
+color13 = "#ff33ff"
+color14 = "#33ffff"
+color15 = "#ffffff"
+EOF2
+
+[[ $("$ROOT/bin/omarchy-theme-color" --file "$ansi_next/colors.toml" accent) == "#3366ff" ]] ||
+  fail "a theme without accent falls back to color4"
+pass "a theme without accent falls back to color4"
+
+HOME="$ansi_home" OMARCHY_PATH="$ROOT" PATH="$ROOT/bin:$PATH" "$ROOT/bin/omarchy-theme-set-templates"
+
+for name in hyprland.lua shell.toml kitty.conf; do
+  [[ -f $ansi_next/$name ]] || fail "an ANSI-only theme renders $name"
+  ! grep -q '{{' "$ansi_next/$name" || fail "an ANSI-only theme leaves no placeholders in $name: $(grep '{{' "$ansi_next/$name")"
+done
+pass "an ANSI-only theme leaves no placeholders in generated configs"

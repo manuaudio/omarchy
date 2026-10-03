@@ -220,6 +220,9 @@ resolve_theme_colors() {
   alias_theme_color magenta purple
   alias_theme_color bright_magenta bright_purple
 
+  # Like the shell, fall back to ANSI blue when a theme has no explicit accent.
+  [[ ${THEME_COLORS[accent]} ]] || THEME_COLORS[accent]="${THEME_COLORS[color4]:-${THEME_COLORS[blue]:-${THEME_COLORS[foreground]}}}"
+
   [[ ${THEME_COLORS[light_foreground]} ]]  || THEME_COLORS[light_foreground]="${THEME_COLORS[color7]:-${THEME_COLORS[foreground]}}"
   [[ ${THEME_COLORS[bright_foreground]} ]] || THEME_COLORS[bright_foreground]="${THEME_COLORS[color15]:-${THEME_COLORS[foreground]}}"
   THEME_COLORS[cursor]="${THEME_COLORS[bright_foreground]}"
