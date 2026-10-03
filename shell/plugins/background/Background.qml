@@ -149,7 +149,9 @@ Item {
   function probeNextSize() {
     if (sizeProbe.running || sizeQueue.length === 0) return
     sizeProbe.path = sizeQueue[0]
-    sizeProbe.command = ["magick", "identify", "-ping", "-format", "%w %h", sizeProbe.path]
+    // An animated GIF or WebP prints a size for every frame. Ending each with
+    // a newline keeps them from running together, so the first is frame one's.
+    sizeProbe.command = ["magick", "identify", "-ping", "-format", "%w %h\n", sizeProbe.path]
     sizeProbe.running = true
   }
 

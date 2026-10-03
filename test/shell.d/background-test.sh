@@ -1,5 +1,8 @@
 #!/bin/bash
-source "$(dirname "$0")/base-test.sh"
+
+set -euo pipefail
+
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
 
 run_node_test <<'JS'
 const fs = require('fs')
@@ -55,7 +58,7 @@ assert(
   'background derives its decode size from the screen in physical pixels'
 )
 assert(
-  backgroundQml.includes('["magick", "identify", "-ping", "-format", "%w %h", sizeProbe.path]') &&
+  backgroundQml.includes('["magick", "identify", "-ping", "-format", "%w %h\\n", sizeProbe.path]') &&
     backgroundQml.includes('if (native.width > 0 && (native.width < decodeWidth || native.height < decodeHeight)) return Qt.size(native.width, native.height)'),
   'background reads the wallpaper header and never decodes larger than the native size'
 )
@@ -73,5 +76,36 @@ assert(
   /function requestNativeSize\(path\) \{\s*if \(!path \|\| isVideo\(path\)/.test(backgroundQml) &&
     /function prepareBackground[\s\S]*?requestNativeSize\(path\)/.test(backgroundQml),
   'background never probes videos and probes a prepared frame ahead of its transition'
+)
+JS
+
+# Run the size probe exactly as Background.qml builds it, against an animated
+# GIF: ImageMagick prints a size for every frame, and the shell must still read
+# the first frame's width and height rather than the frames run together.
+require_command magick
+
+tmp_dir=$(mktemp -d)
+trap 'rm -rf "$tmp_dir"' EXIT
+
+animated_gif="$tmp_dir/animated.gif"
+magick -size 64x48 xc:red xc:green xc:blue -set delay 20 "$animated_gif"
+
+ANIMATED_GIF="$animated_gif" run_node_test <<'JS'
+const fs = require('fs')
+const { spawnSync } = require('child_process')
+
+const backgroundQml = fs.readFileSync(path.join(root, 'shell/plugins/background/Background.qml'), 'utf8')
+const command = backgroundQml.match(/sizeProbe\.command = (\[.*\])/)
+assert(command, 'background builds its size probe as an argv list')
+
+const argv = new Function('sizeProbe', `return ${command[1]}`)({ path: process.env.ANIMATED_GIF })
+const probe = spawnSync(argv[0], argv.slice(1), { encoding: 'utf8' })
+assert(probe.status === 0, 'the size probe reads an animated GIF', probe.stderr || String(probe.error))
+
+const parts = String(probe.stdout || '').trim().split(/\s+/)
+assertDeepEqual(
+  [parseInt(parts[0], 10), parseInt(parts[1], 10)],
+  [64, 48],
+  'the size probe reads an animated GIF at its first frame\'s size'
 )
 JS
