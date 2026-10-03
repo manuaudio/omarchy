@@ -100,7 +100,8 @@ pass "taildrop receive ignores downloads that arrive while it waits"
 pass "taildrop receive empties its staging directory"
 
 # A downloads directory under home is shown the way people know it, as ~/...
-home="$WORKDIR/home"
+# The home path carries glob characters so it must be matched as a literal prefix.
+home="$WORKDIR/home[1]"
 mkdir -p "$home/Downloads"
 printf 'pdf' >"$WORKDIR/outbox/report.pdf"
 : >"$WORKDIR/notifications"
