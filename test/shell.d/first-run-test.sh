@@ -33,3 +33,36 @@ if grep -F 'skip-first-run-update-notification' "$ROOT/install/user/first-run/wi
 fi
 
 pass "first-run uses one lifecycle completion marker"
+
+cat >"$mock_bin/gsettings" <<'SH'
+#!/bin/bash
+echo "$*" >>"$OMARCHY_TEST_GSETTINGS_LOG"
+SH
+chmod +x "$mock_bin/gsettings"
+
+run_first_run_gnome_theme() {
+  local theme="$1"
+  local theme_home="$test_tmp/gnome-$theme"
+
+  mkdir -p "$theme_home/.local/state/omarchy/current"
+  ln -snf "$ROOT/themes/$theme" "$theme_home/.local/state/omarchy/current/theme"
+
+  HOME="$theme_home" PATH="$mock_bin:$ROOT/bin:$PATH" OMARCHY_PATH="$ROOT" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=$test_tmp/bus" OMARCHY_TEST_GSETTINGS_LOG="$theme_home/gsettings.log" \
+    bash "$ROOT/install/user/first-run/gnome-theme.sh"
+  cat "$theme_home/gsettings.log"
+}
+
+gsettings_calls=$(run_first_run_gnome_theme tokyo-night)
+grep -Fx 'set org.gnome.desktop.interface icon-theme Yaru-magenta' <<<"$gsettings_calls" >/dev/null ||
+  fail "first-run GNOME theme applies the current theme's icons" "$gsettings_calls"
+grep -Fx 'set org.gnome.desktop.interface color-scheme prefer-dark' <<<"$gsettings_calls" >/dev/null ||
+  fail "first-run GNOME theme keeps dark themes dark" "$gsettings_calls"
+
+gsettings_calls=$(run_first_run_gnome_theme catppuccin-latte)
+grep -Fx 'set org.gnome.desktop.interface color-scheme prefer-light' <<<"$gsettings_calls" >/dev/null ||
+  fail "first-run GNOME theme applies light mode for light themes" "$gsettings_calls"
+grep -Fx 'set org.gnome.desktop.interface gtk-theme Adwaita' <<<"$gsettings_calls" >/dev/null ||
+  fail "first-run GNOME theme uses the light GTK theme for light themes" "$gsettings_calls"
+
+pass "first-run GNOME theme follows the current theme"

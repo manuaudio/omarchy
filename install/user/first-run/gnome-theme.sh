@@ -1,3 +1,3 @@
-gsettings set org.gnome.desktop.interface gtk-theme "Adwaita-dark"
-gsettings set org.gnome.desktop.interface color-scheme "prefer-dark"
-gsettings set org.gnome.desktop.interface icon-theme "Yaru-blue"
+# The install-time theme set runs headless and skips its GNOME sync, so apply
+# the current theme's color scheme and icons now that a session bus exists.
+omarchy-theme-set-gnome
