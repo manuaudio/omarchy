@@ -87,7 +87,6 @@ kill -0 "$socat_pid" 2>/dev/null && fail "the Hyprland event listener stops afte
 pass "the Hyprland event listener stops after focus is restored"
 
 # Screensavers can close while the launcher is still waiting on another monitor, consuming their events.
-kill "$socat_pid" 2>/dev/null || true
 : >"$tmpdir/calls"
 : >"$tmpdir/spawned"
 PATH="$tmpdir/bin:$PATH" TEST_DIR="$tmpdir" XDG_RUNTIME_DIR="$tmpdir" HYPRLAND_INSTANCE_SIGNATURE=test \
