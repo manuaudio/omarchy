@@ -183,9 +183,10 @@ pass "a scan from another day is made again"
 # collector. Keep the valid neighboring sessions and skip only bad values.
 mkdir -p "$sessions/bad-summary" "$sessions/bad-usage"
 printf '{"last_active_at":"%s","num_messages":"3.0"}\n' "$now" >"$sessions/bad-summary/summary.json"
-printf '{"turns":[{"endedAt":"%s","modelUsage":{"grok-bad":{"inputTokens":"12.5"}}}]}\n' "$now" >"$sessions/bad-usage/usage.json"
+printf '{"turns":[{"endedAt":"%s","modelUsage":{"grok-survivor":{"inputTokens":20,"outputTokens":5}}}]}\n' "$now" >"$sessions/bad-summary/usage.json"
+printf '{"turns":[{"endedAt":"%s","modelUsage":{"grok-discarded":{"inputTokens":50},"grok-bad":{"inputTokens":"12.5"}}}]}\n' "$now" >"$sessions/bad-usage/usage.json"
 record=$(collect)
-[[ $(jq -c '{totalSessions, totalPrompts, todayTotalTokens}' <<<"$record") == '{"totalSessions":4,"totalPrompts":11,"todayTotalTokens":1265}' ]] ||
+[[ $(jq -c '{totalSessions, totalPrompts, todayPrompts, todayTotalTokens, survivor: .modelUsage["grok-survivor"], discarded: .modelUsage["grok-discarded"]}' <<<"$record") == '{"totalSessions":4,"totalPrompts":11,"todayPrompts":3,"todayTotalTokens":1290,"survivor":{"inputTokens":20,"outputTokens":5,"cacheReadInputTokens":0,"cacheCreationInputTokens":0},"discarded":null}' ]] ||
   fail "Grok collector skips malformed session values without losing valid sessions" "$record"
 
 # This timestamp only overflows while converting to a negative UTC offset.
