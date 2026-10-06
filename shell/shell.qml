@@ -136,6 +136,7 @@ ShellRoot {
   FileView {
     id: userConfigFile
     path: shell.userConfigPath
+    blockLoading: true
     watchChanges: true
     atomicWrites: true
     printErrors: false
@@ -145,6 +146,7 @@ ShellRoot {
   }
 
   Component.onCompleted: {
+    shell.applyShellConfig()
     console.log("omarchy-shell paths",
       "omarchyPath=" + shell.omarchyPath,
       "shellDir=" + Quickshell.shellDir,
