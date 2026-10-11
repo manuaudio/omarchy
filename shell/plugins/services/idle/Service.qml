@@ -39,6 +39,7 @@ Item {
   property string lastEvent: "starting"
   property string lastEventAt: ""
   property var screensaverWindows: ({})
+  property var closedScreensaverWindows: ({})
   property int screensaverWindowCount: 0
 
   function secondsFromConfig(value, fallback) {
@@ -138,12 +139,12 @@ Item {
     root.screensaverWindowCount = next.count
   }
 
-  // Only adds: a toplevel has no class until Hyprland reports its clients, so
-  // missing from this list is not closed. closewindow events handle closing.
+  // Only adds: a toplevel's class arrives after it does, so absence is not a close, and a
+  // clients reply sent before a closewindow can land after it, so closed stays closed.
   function syncScreensaverWindows() {
     var next = IdleModel.screensaverWindowsFromToplevels(Hyprland.toplevels.values, root.screensaverClass)
     for (var address in next.windows) {
-      if (!root.screensaverWindows[address]) root.handleScreensaverWindowOpened(address)
+      if (!root.screensaverWindows[address] && !root.closedScreensaverWindows[address]) root.handleScreensaverWindowOpened(address)
     }
   }
 
@@ -172,11 +173,15 @@ Item {
     var name = String(event && event.name ? event.name : "")
     if (name === "openwindow") {
       var open = eventParts(event, 4)
+      delete root.closedScreensaverWindows[String(open[0] || "")]
       if (String(open[2] || "") === root.screensaverClass) root.handleScreensaverWindowOpened(open[0])
     } else if (name === "closewindow") {
       var close = eventParts(event, 1)
       var address = String(close[0] || "")
-      if (root.screensaverWindows[address]) root.handleScreensaverWindowClosed(address)
+      if (root.screensaverWindows[address]) {
+        root.closedScreensaverWindows[address] = true
+        root.handleScreensaverWindowClosed(address)
+      }
     }
   }
 

@@ -99,6 +99,13 @@ assert(
     !syncBody.includes('root.screensaverWindows ='),
   'idle sync never closes a counted screensaver whose class Hyprland has not reported yet'
 )
+const eventBody = serviceSource.match(/function handleHyprlandEvent\(event\) \{[\s\S]*?\n  \}/)[0]
+assert(
+  /!root\.closedScreensaverWindows\[address\]\) root\.handleScreensaverWindowOpened/.test(syncBody) &&
+    /closedScreensaverWindows\[address\] = true[\s\S]*?handleScreensaverWindowClosed\(address\)/.test(eventBody) &&
+    /delete root\.closedScreensaverWindows\[/.test(eventBody.split('closewindow')[0]),
+  'idle sync never revives a screensaver closewindow closed, until that address opens again'
+)
 assertDeepEqual(
   idle.screensaverWindowsFromToplevels([{ address: 'abc', lastIpcObject: {} }], 'org.omarchy.screensaver'),
   { windows: {}, count: 0 },
