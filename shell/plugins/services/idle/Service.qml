@@ -138,14 +138,12 @@ Item {
     root.screensaverWindowCount = next.count
   }
 
+  // Only adds: a toplevel has no class until Hyprland reports its clients, so
+  // missing from this list is not closed. closewindow events handle closing.
   function syncScreensaverWindows() {
-    var current = root.screensaverWindows
     var next = IdleModel.screensaverWindowsFromToplevels(Hyprland.toplevels.values, root.screensaverClass)
-    for (var openedAddress in next.windows) {
-      if (!current[openedAddress]) root.handleScreensaverWindowOpened(openedAddress)
-    }
-    for (var closedAddress in current) {
-      if (!next.windows[closedAddress]) root.handleScreensaverWindowClosed(closedAddress)
+    for (var address in next.windows) {
+      if (!root.screensaverWindows[address]) root.handleScreensaverWindowOpened(address)
     }
   }
 

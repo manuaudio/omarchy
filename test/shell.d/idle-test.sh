@@ -94,10 +94,15 @@ assert(
 )
 const syncBody = serviceSource.match(/function syncScreensaverWindows\(\) \{[\s\S]*?\n  \}/)[0]
 assert(
-  syncBody.indexOf('handleScreensaverWindowOpened(') >= 0 &&
-    syncBody.indexOf('handleScreensaverWindowClosed(') > syncBody.indexOf('handleScreensaverWindowOpened(') &&
+  syncBody.includes('handleScreensaverWindowOpened(') &&
+    !syncBody.includes('handleScreensaverWindowClosed(') &&
     !syncBody.includes('root.screensaverWindows ='),
-  'idle reconciles replacement screensavers before closing the old window'
+  'idle sync never closes a counted screensaver whose class Hyprland has not reported yet'
+)
+assertDeepEqual(
+  idle.screensaverWindowsFromToplevels([{ address: 'abc', lastIpcObject: {} }], 'org.omarchy.screensaver'),
+  { windows: {}, count: 0 },
+  'idle cannot classify a toplevel before Hyprland reports its class'
 )
 
 // A force-launched screensaver stays up across idle cycles, and the bar reads
