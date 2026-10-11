@@ -78,6 +78,27 @@ assertDeepEqual(
   { windows: { a: true }, count: 1 },
   'idle leaves screensaver windows unchanged without an address'
 )
+assertDeepEqual(
+  idle.screensaverWindowsFromToplevels([
+    { address: '0xabc', lastIpcObject: { class: 'org.omarchy.screensaver' } },
+    { address: '0xdef', lastIpcObject: { class: 'foot' } }
+  ], 'org.omarchy.screensaver'),
+  { windows: { '0xabc': true }, count: 1 },
+  'idle restores already-open screensaver windows from Hyprland'
+)
+assert(
+  /function syncScreensaverWindows\(\)[\s\S]*?Hyprland\.toplevels\.values/.test(serviceSource) &&
+    /target: Hyprland\.toplevels[\s\S]*?onValuesChanged.*syncScreensaverWindows\(\)/.test(serviceSource) &&
+    /Component\.onCompleted:[\s\S]*?syncScreensaverWindows\(\)/.test(serviceSource),
+  'idle seeds the screensaver count at startup and refreshes it with Hyprland clients'
+)
+const syncBody = serviceSource.match(/function syncScreensaverWindows\(\) \{[\s\S]*?\n  \}/)[0]
+assert(
+  syncBody.indexOf('handleScreensaverWindowOpened(') >= 0 &&
+    syncBody.indexOf('handleScreensaverWindowClosed(') > syncBody.indexOf('handleScreensaverWindowOpened(') &&
+    !syncBody.includes('root.screensaverWindows ='),
+  'idle reconciles replacement screensavers before closing the old window'
+)
 
 // A force-launched screensaver stays up across idle cycles, and the bar reads
 // this count to stay below it, so starting or cancelling a cycle keeps it.

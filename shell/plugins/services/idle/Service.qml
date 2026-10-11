@@ -138,6 +138,17 @@ Item {
     root.screensaverWindowCount = next.count
   }
 
+  function syncScreensaverWindows() {
+    var current = root.screensaverWindows
+    var next = IdleModel.screensaverWindowsFromToplevels(Hyprland.toplevels.values, root.screensaverClass)
+    for (var openedAddress in next.windows) {
+      if (!current[openedAddress]) root.handleScreensaverWindowOpened(openedAddress)
+    }
+    for (var closedAddress in current) {
+      if (!next.windows[closedAddress]) root.handleScreensaverWindowClosed(closedAddress)
+    }
+  }
+
   function handleScreensaverWindowOpened(address) {
     setScreensaverWindow(address, true)
     screensaverLaunchGraceTimer.stop()
@@ -303,6 +314,11 @@ Item {
     function onRawEvent(event) { root.handleHyprlandEvent(event) }
   }
 
+  Connections {
+    target: Hyprland.toplevels
+    function onValuesChanged() { root.syncScreensaverWindows() }
+  }
+
   Process {
     id: screensaverProcess
     onExited: function(exitCode, exitStatus) { root.logEvent("process-exit", "screensaver exitCode=" + exitCode + " status=" + exitStatus) }
@@ -349,6 +365,7 @@ Item {
 
   Component.onCompleted: {
     logEvent("service-ready")
+    syncScreensaverWindows()
     refreshStayAwakeState()
   }
 
