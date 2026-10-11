@@ -39,7 +39,7 @@ Item {
   property string lastEvent: "starting"
   property string lastEventAt: ""
   property var screensaverWindows: ({})
-  property var closedScreensaverWindows: ({})
+  property var closedWindows: ({})
   property int screensaverWindowCount: 0
 
   function secondsFromConfig(value, fallback) {
@@ -144,7 +144,7 @@ Item {
   function syncScreensaverWindows() {
     var next = IdleModel.screensaverWindowsFromToplevels(Hyprland.toplevels.values, root.screensaverClass)
     for (var address in next.windows) {
-      if (!root.screensaverWindows[address] && !root.closedScreensaverWindows[address]) root.handleScreensaverWindowOpened(address)
+      if (!root.screensaverWindows[address] && !root.closedWindows[address]) root.handleScreensaverWindowOpened(address)
     }
   }
 
@@ -173,15 +173,14 @@ Item {
     var name = String(event && event.name ? event.name : "")
     if (name === "openwindow") {
       var open = eventParts(event, 4)
-      delete root.closedScreensaverWindows[String(open[0] || "")]
+      delete root.closedWindows[String(open[0] || "")]
       if (String(open[2] || "") === root.screensaverClass) root.handleScreensaverWindowOpened(open[0])
     } else if (name === "closewindow") {
       var close = eventParts(event, 1)
       var address = String(close[0] || "")
-      if (root.screensaverWindows[address]) {
-        root.closedScreensaverWindows[address] = true
-        root.handleScreensaverWindowClosed(address)
-      }
+      // Every close, counted or not: the lock resets the count before it closes the screensavers.
+      if (address) root.closedWindows[address] = true
+      if (root.screensaverWindows[address]) root.handleScreensaverWindowClosed(address)
     }
   }
 

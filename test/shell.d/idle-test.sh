@@ -101,10 +101,10 @@ assert(
 )
 const eventBody = serviceSource.match(/function handleHyprlandEvent\(event\) \{[\s\S]*?\n  \}/)[0]
 assert(
-  /!root\.closedScreensaverWindows\[address\]\) root\.handleScreensaverWindowOpened/.test(syncBody) &&
-    /closedScreensaverWindows\[address\] = true[\s\S]*?handleScreensaverWindowClosed\(address\)/.test(eventBody) &&
-    /delete root\.closedScreensaverWindows\[/.test(eventBody.split('closewindow')[0]),
-  'idle sync never revives a screensaver closewindow closed, until that address opens again'
+  /!root\.closedWindows\[address\]\) root\.handleScreensaverWindowOpened/.test(syncBody) &&
+    /if \(address\) root\.closedWindows\[address\] = true\n\s*if \(root\.screensaverWindows\[address\]\) root\.handleScreensaverWindowClosed\(address\)/.test(eventBody) &&
+    /delete root\.closedWindows\[/.test(eventBody.split('closewindow')[0]),
+  'idle sync never revives a window closewindow closed, counted or not, until that address opens again'
 )
 assertDeepEqual(
   idle.screensaverWindowsFromToplevels([{ address: 'abc', lastIpcObject: {} }], 'org.omarchy.screensaver'),
