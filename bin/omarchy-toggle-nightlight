@@ -34,13 +34,14 @@ if [[ ${1:-} == "--status" ]]; then
   exit 0
 fi
 
-# Ensure hyprsunset is running. One a few seconds old may still be booting,
-# such as one started at login, so it counts as just started too.
+# Ensure this user's hyprsunset is running. Another user's process controls a
+# different Hyprland session. One a few seconds old may still be booting, such
+# as one started at login, so it counts as just started too.
 STARTING=false
-if ! pgrep -x hyprsunset >/dev/null; then
+if ! pgrep -x -u "$UID" hyprsunset >/dev/null; then
   setsid uwsm-app -- hyprsunset &
   STARTING=true
-elif (( $(ps -o etimes= -p "$(pgrep -nx hyprsunset)" 2>/dev/null || echo 0) < 3 )); then
+elif (( $(ps -o etimes= -p "$(pgrep -nx -u "$UID" hyprsunset)" 2>/dev/null || echo 0) < 3 )); then
   STARTING=true
 fi
 
@@ -53,9 +54,9 @@ else
   TARGET_TEMP=$OFF_TEMP
 fi
 
-# A freshly-started hyprsunset applies its default temperature at the end of
-# its boot, overriding anything set before then — so resend until it sticks. One
-# that has finished starting applies it at once, so it needs no wait.
+# A freshly-started hyprsunset may not have opened its IPC socket yet, so resend
+# until it accepts and reports the target. An established process applies the
+# temperature at once and needs no wait.
 for _ in {1..10}; do
   hyprctl hyprsunset temperature $TARGET_TEMP >/dev/null 2>&1
   if [[ $STARTING == "false" && $(current_temp) == "$TARGET_TEMP" ]]; then
