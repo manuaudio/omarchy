@@ -15,6 +15,7 @@ cat >"$tmp/bin/pw-metadata" <<SH
 state="$tmp/quantum"
 [[ \${PIPEWIRE_DOWN:-0} == 1 ]] && exit 1
 if (( \$# == 5 )); then
+  [[ \${PIPEWIRE_WRITE_DOWN:-0} == 1 ]] && exit 1
   echo "\$5" >"\$state"
 elif [[ -f \$state ]]; then
   echo "Found \"settings\" metadata 30"
@@ -65,10 +66,11 @@ pass "the realtime hint follows the data loop's actual scheduling"
 
 toggle off
 : >"$tmp/notifications"
-if PIPEWIRE_DOWN=1 toggle on 2>/dev/null; then
+if PIPEWIRE_WRITE_DOWN=1 toggle on 2>/dev/null; then
   fail "a failed PipeWire write is reported as a failure"
 fi
-[[ ! -s $tmp/notifications ]] || fail "a failed PipeWire write sends no notification" "$(cat "$tmp/notifications")"
+[[ ! -s $tmp/notifications && $(cat "$tmp/quantum") == 0 ]] ||
+  fail "a failed PipeWire write neither notifies nor changes the setting" "$(cat "$tmp/notifications")"
 echo 256 >"$tmp/quantum"
 : >"$tmp/notifications"
 if PIPEWIRE_DOWN=1 toggle 2>/dev/null || PIPEWIRE_DOWN=1 toggle off 2>/dev/null; then
