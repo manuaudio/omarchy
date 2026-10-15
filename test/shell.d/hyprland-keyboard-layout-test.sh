@@ -105,6 +105,9 @@ XKBVARIANT=phonetic,intl
 assert_input "a third layout keeps its place and variant" "[us,ua,de] [,,nodeadkeys] [$toggle_options]" 'XKBLAYOUT=ua,us,de
 XKBVARIANT=,,nodeadkeys
 '
+assert_input "a us variant that can't type latin still gets a plain us in front" "[us,ru,us] [,,rus] [$toggle_options]" 'XKBLAYOUT=ru,us
+XKBVARIANT=,rus
+'
 
 # The greeter takes no compose or capslock options: they're session comfort
 # settings with nothing to do with typing a password.
@@ -123,6 +126,10 @@ XKBVARIANT=phonetic,intl
 
 assert_greeter_input "greeter keeps later layouts and variants aligned" "[us,ua,de] [,,nodeadkeys] [grp:alts_toggle]" 'XKBLAYOUT=ua,us,de
 XKBVARIANT=,,nodeadkeys
+'
+
+assert_greeter_input "greeter keeps a plain us in front of a cherokee us" "[us,ru,us] [,,chr] [grp:alts_toggle]" 'XKBLAYOUT=ru,us
+XKBVARIANT=,chr
 '
 
 hooks_conf="$ROOT/etc/mkinitcpio.conf.d/omarchy_hooks.conf"

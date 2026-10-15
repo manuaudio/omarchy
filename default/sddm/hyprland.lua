@@ -29,6 +29,8 @@ end
 -- etc/mkinitcpio.conf.d/omarchy_hooks.conf and default/hypr/input.lua.
 local non_latin_layouts =
   " af am ara bd bg by et ge gr il in iq ir kg kh kz la lk mk mm mn mv np rs ru sy th tj ua "
+-- us variants that can't type Latin letters either: Russian phonetic and Cherokee.
+local non_latin_us_variants = " chr rus "
 
 local vconsole = read_vconsole()
 local kb_layout = vconsole.XKBLAYOUT or "us"
@@ -50,7 +52,7 @@ if non_latin_layouts:find(" " .. kb_layout:match("^[^,]*") .. " ", 1, true) then
 
   local us_variant = ""
   for i, layout in ipairs(layouts) do
-    if layout == "us" then
+    if layout == "us" and not non_latin_us_variants:find(" " .. (variants[i] or "") .. " ", 1, true) then
       us_variant = variants[i] or ""
       table.remove(layouts, i)
       if variants[i] then table.remove(variants, i) end
