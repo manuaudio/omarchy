@@ -8,9 +8,10 @@ config="$HOME/.config/retroarch/retroarch.cfg"
 if [[ -f $config ]] && grep -q '^video_driver = "vulkan"$' "$config"; then
   omarchy-pkg-add vulkan-tools
 
-  # grep reads the whole summary rather than quitting at the first match (-q):
-  # under pipefail, vulkaninfo dying of SIGPIPE would read as no GPU.
-  if ! vulkaninfo --summary 2>/dev/null | grep -E 'deviceType += PHYSICAL_DEVICE_TYPE_(INTEGRATED|DISCRETE|VIRTUAL)_GPU' >/dev/null; then
+  # Match what vulkaninfo lists, not how it exits: it can list a working GPU and
+  # still fail, and under pipefail a failing or SIGPIPE'd probe reads as no GPU.
+  summary=$(vulkaninfo --summary 2>/dev/null || true)
+  if ! grep -qE 'deviceType += PHYSICAL_DEVICE_TYPE_(INTEGRATED|DISCRETE|VIRTUAL)_GPU' <<<"$summary"; then
     sed -i 's/^video_driver = "vulkan"$/video_driver = "glcore"/' "$config"
   fi
 fi

@@ -21,6 +21,7 @@ echo "	deviceType         = PHYSICAL_DEVICE_TYPE_$VULKAN_DEVICE_TYPE"
 for ((line = 0; line < ${VULKAN_SUMMARY_TAIL:-0}; line++)); do
   echo "	driverInfo         = Mesa 26.2.2"
 done
+exit "${VULKAN_EXIT:-0}"
 SH
 chmod +x "$tmp/bin/"*
 
@@ -73,6 +74,8 @@ pass "the migration switches a Vulkan config to glcore when no GPU provides Vulk
 # would leave vulkaninfo to die of SIGPIPE, which pipefail reads as no GPU.
 [[ $(VULKAN_SUMMARY_TAIL=200000 migrate vulkan DISCRETE_GPU) == "vulkan" ]] ||
   fail "the migration keeps Vulkan when vulkaninfo prints more after the device"
+[[ $(VULKAN_EXIT=1 migrate vulkan INTEGRATED_GPU) == "vulkan" ]] ||
+  fail "the migration keeps Vulkan when vulkaninfo lists a GPU and then fails"
 pass "the migration keeps Vulkan on a GPU that provides it"
 
 [[ $(migrate gl "") == "gl" && ! -e $tmp/pkg-add.log ]] || fail "the migration leaves a user's own driver alone"
