@@ -54,9 +54,9 @@ else
   TARGET_TEMP=$OFF_TEMP
 fi
 
-# A freshly-started hyprsunset may not have opened its IPC socket yet, so resend
-# until it accepts and reports the target. An established process applies the
-# temperature at once and needs no wait.
+# A freshly-started hyprsunset applies its default temperature at the end of
+# its boot, overriding anything set before then — so resend until it sticks. One
+# that has finished starting applies it at once, so it needs no wait.
 for _ in {1..10}; do
   hyprctl hyprsunset temperature $TARGET_TEMP >/dev/null 2>&1
   if [[ $STARTING == "false" && $(current_temp) == "$TARGET_TEMP" ]]; then
