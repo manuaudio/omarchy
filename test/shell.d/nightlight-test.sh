@@ -5,8 +5,13 @@ set -euo pipefail
 source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
 
 run_node_test <<'JS'
+const fs = require('fs')
 const nightlight = requireFromRoot('shell/plugins/services/nightlight/NightlightModel.js')
+const serviceSource = fs.readFileSync(root + '/shell/plugins/services/nightlight/Service.qml', 'utf8')
+const runApply = serviceSource.match(/function runApply\(temp\) \{([\s\S]*?)\n  \}/)
+const executableRunApply = runApply ? runApply[1].replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '') : ''
 
+assert(/^\s*applyProcess\.command\s*=\s*NightlightModel\.applyCommand\(temp\)\s*$/m.test(executableRunApply), 'nightlight service delegates its apply process to the tested model command')
 assertEqual(nightlight.temperatureFromOutput('4000\n'), 4000, 'nightlight parses probe temperature')
 assertEqual(nightlight.temperatureFromOutput("Couldn't connect to hyprsunset"), null, 'nightlight treats unreachable hyprsunset as unknown')
 assertEqual(nightlight.isNightlight(4000), true, 'nightlight reports warm temperatures as enabled')
