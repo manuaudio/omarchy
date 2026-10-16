@@ -154,6 +154,8 @@ if OMARCHY_TEST_LOGIN_UUID=u-broken OMARCHY_TEST_LOGIN_EMAIL=broken@example.com 
   omarchy-agent-account-add claude Broken </dev/null >"$test_tmp/broken-output" 2>&1; then
   fail "a shared folder that is a file stops the add"
 fi
+grep -Fq "Couldn't set up a home for the new account." "$test_tmp/broken-output" ||
+  fail "the failed add reports the shared-folder setup error" "$(cat "$test_tmp/broken-output")"
 [[ -z $(find "$accounts/claude/.pending" -mindepth 1 -print -quit 2>/dev/null) ]] ||
   fail "a failed account setup leaves no pending login behind" "$(ls -A "$accounts/claude/.pending")"
 rm "$HOME/.claude/commands"
