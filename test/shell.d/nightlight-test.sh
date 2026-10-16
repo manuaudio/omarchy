@@ -150,17 +150,51 @@ printf '%s\n' "$*" >>"$LAUNCH_LOG"
 SH
 chmod +x "$TMPDIR/bin/pgrep" "$TMPDIR/bin/uwsm-app"
 
+wait_for_launch() {
+  for _ in {1..20}; do
+    [[ -s $LAUNCH_LOG ]] && break
+    sleep 0.05
+  done
+}
+
 LAUNCH_LOG="$LAUNCH_LOG" TEST_UID="$UID" nightlight_cli >/dev/null
-for _ in {1..20}; do
-  [[ -s $LAUNCH_LOG ]] && break
-  sleep 0.05
-done
+wait_for_launch
 grep -Fqx -- '-- hyprsunset' "$LAUNCH_LOG" || fail "nightlight toggle starts this user's hyprsunset when only another user's runs"
 
 rm -f "$LAUNCH_LOG"
 LAUNCH_LOG="$LAUNCH_LOG" TEST_UID="$UID" OWN_HYPRSUNSET=1 nightlight_cli >/dev/null
 sleep 0.2
 [[ ! -e $LAUNCH_LOG ]] || fail "nightlight toggle leaves a running hyprsunset of this user's alone"
-grep -Fq 'pgrep -x -u \"$UID\" hyprsunset' "$ROOT/shell/plugins/services/nightlight/Service.qml" ||
-  fail "the nightlight service only counts this user's hyprsunset"
-pass "nightlight only counts this user's hyprsunset as running"
+pass "nightlight toggle only counts this user's hyprsunset as running"
+
+# The shell service runs its script in a login shell; run it without -l here, so
+# no login profile can put the real commands ahead of these mocks.
+mapfile -d '' -t apply_command < <(run_node_test <<'JS'
+const nightlight = requireFromRoot('shell/plugins/services/nightlight/NightlightModel.js')
+process.stdout.write(nightlight.applyCommand(4000).map(arg => arg + '\0').join(''))
+JS
+)
+[[ ${apply_command[0]:-} == "bash" && ${apply_command[1]:-} == "-lc" ]] || fail "the nightlight service applies through a login shell" "${apply_command[*]}"
+
+nightlight_service() {
+  PATH="$TMPDIR/bin:$PATH" \
+  HYPRSUNSET_STATE="$STATE" \
+  OMARCHY_SHELL_LOG="$SHELL_LOG" \
+  LAUNCH_LOG="$LAUNCH_LOG" \
+  TEST_UID="$UID" \
+    bash -c "${apply_command[2]}"
+}
+
+printf '6500\n' >"$STATE"
+rm -f "$LAUNCH_LOG"
+nightlight_service
+wait_for_launch
+grep -Fqx -- '-- hyprsunset' "$LAUNCH_LOG" || fail "nightlight service starts this user's hyprsunset when only another user's runs"
+[[ $(<"$STATE") == 4000 ]] || fail "nightlight service applies the requested temperature"
+
+printf '6500\n' >"$STATE"
+rm -f "$LAUNCH_LOG"
+OWN_HYPRSUNSET=1 nightlight_service
+sleep 0.2
+[[ ! -e $LAUNCH_LOG && $(<"$STATE") == 4000 ]] || fail "nightlight service leaves a running hyprsunset of this user's alone"
+pass "nightlight service only counts this user's hyprsunset as running"
