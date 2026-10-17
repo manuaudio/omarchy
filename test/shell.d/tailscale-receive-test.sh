@@ -141,3 +141,11 @@ printf 'pdf' >"$WORKDIR/outbox/report.pdf"
 receive 1 env HOME="$home"
 assert_notification "$downloads/report.pdf" "Received report.pdf" "Saved to ~/Downloads"
 pass "taildrop receive shortens a downloads directory under home to ~"
+
+# A sibling whose name starts with home is not inside home and keeps its full path.
+downloads="$home-backup/Downloads"
+mkdir -p "$downloads"
+printf 'pdf' >"$WORKDIR/outbox/archive.pdf"
+receive 1 env HOME="$home"
+assert_notification "$downloads/archive.pdf" "Received archive.pdf" "Saved to $downloads"
+pass "taildrop receive leaves a home-prefix sibling path unchanged"
