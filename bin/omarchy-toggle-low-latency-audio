@@ -84,10 +84,10 @@ esac
 
 if enabled; then
   if realtime; then
-    omarchy-notification-send -g 󰋋 "Low-latency audio on"
+    omarchy-notification-send -g 󰋋 "$(omarchy-i18n audio.lowLatencyOn)"
   else
-    omarchy-notification-send -g 󰋋 "Low-latency audio on" "PipeWire isn't running with realtime priority (install rtkit), so expect crackles under load"
+    omarchy-notification-send -g 󰋋 "$(omarchy-i18n audio.lowLatencyOn)" "$(omarchy-i18n audio.lowLatencyRealtimeHint)"
   fi
 else
-  omarchy-notification-send -g 󰋋 "Low-latency audio off"
+  omarchy-notification-send -g 󰋋 "$(omarchy-i18n audio.lowLatencyOff)"
 fi

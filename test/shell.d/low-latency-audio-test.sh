@@ -23,6 +23,14 @@ elif [[ -f \$state ]]; then
 fi
 SH
 printf '#!/bin/bash\necho "$*" >>"%s/notifications"\n' "$tmp" >"$tmp/bin/omarchy-notification-send"
+cat >"$tmp/bin/omarchy-i18n" <<'SH'
+#!/bin/bash
+case $1 in
+audio.lowLatencyOff) echo "Low-latency audio off" ;;
+audio.lowLatencyOn) echo "Low-latency audio on" ;;
+audio.lowLatencyRealtimeHint) echo "PipeWire isn't running with realtime priority (install rtkit), so expect crackles under load" ;;
+esac
+SH
 # PipeWire's data loop shows FF (FIFO) when it has realtime priority, TS
 # otherwise. pgrep must ask for this user's PipeWire.
 printf '#!/bin/bash\n[[ " $* " == *" -u %s "* ]] && echo 4242\n' "$UID" >"$tmp/bin/pgrep"
@@ -97,6 +105,8 @@ if toggle sideways 2>/dev/null; then
 fi
 pass "an unknown argument is rejected"
 
-grep -qF '"checked":"omarchy-toggle-low-latency-audio --status","action":"omarchy-toggle-low-latency-audio"' "$ROOT/default/omarchy/omarchy-menu.jsonc" ||
-  fail "the toggle menu offers low-latency audio with its state checked"
-pass "the toggle menu offers low-latency audio with its state checked"
+grep -qF '"trigger.toggle.low-latency-audio-on": {"icon":"󰋋","label":"Low Latency Audio On","when":"! omarchy-toggle-low-latency-audio --status","action":"omarchy-toggle-low-latency-audio"}' "$ROOT/default/omarchy/omarchy-menu.jsonc" ||
+  fail "the toggle menu offers to enable low-latency audio when it is off"
+grep -qF '"trigger.toggle.low-latency-audio-off": {"icon":"󰋋","label":"Low Latency Audio Off","when":"omarchy-toggle-low-latency-audio --status","action":"omarchy-toggle-low-latency-audio"}' "$ROOT/default/omarchy/omarchy-menu.jsonc" ||
+  fail "the toggle menu offers to disable low-latency audio when it is on"
+pass "the toggle menu presents the action matching the current low-latency audio state"
