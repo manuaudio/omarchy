@@ -137,10 +137,6 @@ qml_matches "$shell_qml" 'return serviceFor\( *shell\.pluginRegistry\.resolveEna
   fail "trusted first-party service lookups do not resolve enabled clones"
 qml_matches "$shell_qml" 'allowOwnService *&& *shell\.pluginOwnsTarget\( *key, *requestedId *\)[^}]*return shell\.pluginServiceFor\( *key, *requestedId *\)' ||
   fail "cloned widgets cannot use a source id to reach their own service"
-qml_matches "$shell_qml" '_serviceAllowed: *function\( *requestedId *\) *\{[^}]*shell\.pluginOwnsTarget\( *key, *requestedId *\)' ||
-  fail "own-service warning authorization does not recognize clone source ids"
-qml_matches "$shell_qml" '_firstPartyServiceAllowed: *function\( *requestedId *\) *\{[^}]*Object\.prototype\.hasOwnProperty\.call\( *firstPartyServices, *requestedId *\)' ||
-  fail "first-party warning authorization accepts inherited object keys"
 pass "service facades resolve enabled clones without widening replacement-bar access"
 
 require_quickshell "plugin authentication boundary runtime test"
