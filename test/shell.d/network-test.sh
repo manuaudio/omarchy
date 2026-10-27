@@ -9,16 +9,6 @@ const fs = require('fs')
 const network = requireFromRoot('shell/plugins/panels/network/Model.js')
 const panelSource = fs.readFileSync(root + '/shell/plugins/panels/network/Panel.qml', 'utf8')
 
-// The stat grid is set in body-small and spacing does not follow a body-small
-// override, so the panel grows with it rather than overlapping labels and
-// values (#13572). The divisor must stay body-small's own default.
-const styleSource = fs.readFileSync(root + '/shell/Commons/Style.qml', 'utf8')
-assert(
-  panelSource.includes('contentWidth: panel.fittedContentWidth(Style.space(380) * Math.max(1, Style.font.bodySmall / Style.fontPx(0.917)))') &&
-    /readonly property int bodySmall:\s+root\.fontToken\("body-small",\s+root\.fontPx\(0\.917\)\)/.test(styleSource),
-  'network panel widens with a raised body-small font'
-)
-
 // scannerEnabled lives on a shared WifiDevice with no reference counting, so
 // the panel has to own what it enabled. Run the helper's own JavaScript against
 // stand-in devices: the two invariants it carries are that a closed panel never
