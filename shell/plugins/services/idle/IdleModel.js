@@ -32,34 +32,23 @@ function eventParts(event, count) {
   return String(event && event.data ? event.data : "").split(",")
 }
 
+function windowAddress(address) {
+  return String(address || "").replace(/^0x/i, "").toLowerCase()
+}
+
 function screensaverWindowsAfter(windows, address, visible) {
-  var key = String(address || "")
-  if (!key) {
-    var current = windows || {}
-    var existingCount = 0
-    for (var currentKey in current) {
-      if (current[currentKey]) existingCount++
-    }
-    return { windows: current, count: existingCount }
-  }
-
+  var key = windowAddress(address)
   var next = {}
-  var count = 0
   for (var existing in windows || {}) {
-    if (existing !== key && windows[existing]) {
-      next[existing] = true
-      count++
-    }
+    var normalized = windowAddress(existing)
+    if (normalized && normalized !== key && windows[existing]) next[normalized] = true
   }
 
-  if (visible) {
-    next[key] = true
-    count++
-  }
+  if (key && visible) next[key] = true
 
   return {
     windows: next,
-    count: count
+    count: Object.keys(next).length
   }
 }
 
@@ -80,6 +69,7 @@ if (typeof module !== "undefined") {
     firstIdleTimeout: firstIdleTimeout,
     delayAfterFirstIdle: delayAfterFirstIdle,
     eventParts: eventParts,
+    windowAddress: windowAddress,
     screensaverWindowsAfter: screensaverWindowsAfter,
     screensaverWindowsFromToplevels: screensaverWindowsFromToplevels
   }

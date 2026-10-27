@@ -186,11 +186,12 @@ Item {
     var name = String(event && event.name ? event.name : "")
     if (name === "openwindow") {
       var open = eventParts(event, 4)
-      delete root.closedWindows[String(open[0] || "")]
+      open[0] = IdleModel.windowAddress(open[0])
+      delete root.closedWindows[open[0]]
       if (String(open[2] || "") === root.screensaverClass) root.handleScreensaverWindowOpened(open[0])
     } else if (name === "closewindow") {
       var close = eventParts(event, 1)
-      var address = String(close[0] || "")
+      var address = IdleModel.windowAddress(close[0])
       // Every close, counted or not: the lock resets the count before it closes the screensavers.
       if (address) root.closedWindows[address] = true
       if (root.screensaverWindows[address]) root.handleScreensaverWindowClosed(address)

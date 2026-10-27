@@ -46,8 +46,16 @@ assertDeepEqual(
     { address: '0xabc', lastIpcObject: { class: 'org.omarchy.screensaver' } },
     { address: '0xdef', lastIpcObject: { class: 'foot' } }
   ], 'org.omarchy.screensaver'),
-  { windows: { '0xabc': true }, count: 1 },
-  'idle restores already-open screensaver windows from Hyprland'
+  { windows: { abc: true }, count: 1 },
+  'idle restores already-open screensaver windows from Hyprland with an event-compatible address'
+)
+const restoredScreensavers = idle.screensaverWindowsFromToplevels([
+  { address: '0xAbC', lastIpcObject: { class: 'org.omarchy.screensaver' } }
+], 'org.omarchy.screensaver')
+assertDeepEqual(
+  idle.screensaverWindowsAfter(restoredScreensavers.windows, 'ABC', false),
+  { windows: {}, count: 0 },
+  'idle close events remove screensavers restored from Hyprland snapshots'
 )
 assertDeepEqual(
   idle.screensaverWindowsFromToplevels([{ address: 'abc', lastIpcObject: {} }], 'org.omarchy.screensaver'),
