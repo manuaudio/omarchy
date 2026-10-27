@@ -41,6 +41,19 @@ Item {
   property var screensaverWindows: ({})
   property var closedWindows: ({})
   property int screensaverWindowCount: 0
+  // Reading each nested lastIpcObject makes this binding react when Hyprland
+  // fills in a class after adding the toplevel to the model.
+  readonly property var screensaverToplevelStates: {
+    var states = []
+    var toplevels = Hyprland.toplevels.values
+    for (var i = 0; i < toplevels.length; i++) {
+      var toplevel = toplevels[i]
+      var client = toplevel && toplevel.lastIpcObject ? toplevel.lastIpcObject : {}
+      states.push([String(toplevel && (toplevel.address || client.address) || ""), String(client.class || "")])
+    }
+    return states
+  }
+  onScreensaverToplevelStatesChanged: root.syncScreensaverWindows()
 
   function secondsFromConfig(value, fallback) {
     return IdleModel.secondsFromConfig(value, fallback)

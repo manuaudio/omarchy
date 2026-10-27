@@ -56,6 +56,11 @@ assert(
     /Component\.onCompleted:[\s\S]*?syncScreensaverWindows\(\)/.test(serviceSource),
   'idle seeds the screensaver count at startup and refreshes it with Hyprland clients'
 )
+assert(
+  /readonly property var screensaverToplevelStates:[\s\S]*?lastIpcObject/.test(serviceSource) &&
+    /onScreensaverToplevelStatesChanged: root\.syncScreensaverWindows\(\)/.test(serviceSource),
+  'idle refreshes the screensaver count when Hyprland fills in a toplevel class'
+)
 const syncBody = serviceSource.match(/function syncScreensaverWindows\(\) \{[\s\S]*?\n  \}/)[0]
 assert(
   syncBody.includes('handleScreensaverWindowOpened(') &&
