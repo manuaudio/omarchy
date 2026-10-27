@@ -137,6 +137,10 @@ qml_matches "$shell_qml" 'return serviceFor\( *shell\.pluginRegistry\.resolveEna
   fail "trusted first-party service lookups do not resolve enabled clones"
 qml_matches "$shell_qml" 'allowOwnService *&& *shell\.pluginOwnsTarget\( *key, *requestedId *\)[^}]*return shell\.pluginServiceFor\( *key, *requestedId *\)' ||
   fail "cloned widgets cannot use a source id to reach their own service"
+qml_matches "$shell_qml" '_serviceAllowed: *function\( *requestedId *\) *\{[^}]*shell\.pluginOwnsTarget\( *key, *requestedId *\)' ||
+  fail "own-service warning authorization does not recognize clone source ids"
+qml_matches "$shell_qml" '_firstPartyServiceAllowed: *function\( *requestedId *\) *\{[^}]*Object\.prototype\.hasOwnProperty\.call\( *firstPartyServices, *requestedId *\)' ||
+  fail "first-party warning authorization accepts inherited object keys"
 pass "service facades resolve enabled clones without widening replacement-bar access"
 
 require_quickshell "plugin authentication boundary runtime test"
@@ -150,7 +154,10 @@ denials() {
 if [[ $(denials 'serviceFor("omarchy.idle")') != 1 ||
   $(denials 'resolveEnabledId("omarchy.idle")') != 1 ||
   $(denials 'firstPartyServiceFor("omarchy.polkit")') != 1 ||
+  $(denials 'firstPartyServiceFor("constructor")') != 1 ||
   $(denials 'resolveEnabledId("constructor")') != 1 ||
+  $(denials 'serviceFor("example.source")') != 0 ||
+  $(denials 'firstPartyServiceFor("example.source")') != 0 ||
   $(denials 'serviceFor("example.safe")') != 0 ||
   $(denials 'resolveEnabledId("example.safe")') != 0 ]]; then
   sed -n '1,220p' "$QML_FIXTURE_LOG" >&2

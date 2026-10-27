@@ -41,6 +41,15 @@ ShellRoot {
       _serviceLookup: function(requestedId) {
         return requestedId === caller ? root.ownService : null
       },
+      _serviceAllowed: function(requestedId) {
+        return requestedId === caller || requestedId === "example.source"
+      },
+      _firstPartyServiceLookup: function(requestedId) {
+        return ({})[requestedId] || null
+      },
+      _firstPartyServiceAllowed: function(requestedId) {
+        return requestedId === "example.source"
+      },
       _summon: function(requestedId) {
         if (requestedId !== caller) return false
         root.calls = root.calls.concat(["summon"])
@@ -66,6 +75,10 @@ ShellRoot {
 
     var own = api.serviceFor(caller)
     var registry = registryApiComponent.createObject(null, { pluginId: caller })
+    // A clone may own its built-in source id even while its service is unloaded.
+    api.serviceFor("example.source")
+    api.firstPartyServiceFor("example.source")
+    var inheritedFirstPartyDenied = api.firstPartyServiceFor("constructor") === null
     // Repeated denied lookups (bindings re-evaluating) should warn only once.
     var repeatedDenials = api.serviceFor("omarchy.idle") === null
       && api.serviceFor("omarchy.idle") === null
@@ -96,6 +109,7 @@ ShellRoot {
         && root.ownService.manifest.version === "kept",
       authStoreImportIsolated: authStoreReader.has("omarchy.lock") === false,
       noGenericPluginShellFactory: typeof api.pluginShellForId !== "function",
+      inheritedFirstPartyDenied: inheritedFirstPartyDenied,
       repeatedDenials: repeatedDenials,
       calls: root.calls
     }

@@ -640,10 +640,18 @@ ShellRoot {
       _serviceLookup: function(requestedId) {
         return allowOwnService ? shell.pluginServiceFor(key, requestedId) : null
       },
+      _serviceAllowed: function(requestedId) {
+        return allowOwnService && shell.pluginOwnsTarget(key, requestedId)
+      },
       _firstPartyServiceLookup: function(requestedId) {
         if (allowOwnService && shell.pluginOwnsTarget(key, requestedId))
           return shell.pluginServiceFor(key, requestedId)
         return hasCurrentBarCapabilities() ? (firstPartyServices[requestedId] || null) : null
+      },
+      _firstPartyServiceAllowed: function(requestedId) {
+        if (allowOwnService && shell.pluginOwnsTarget(key, requestedId)) return true
+        return hasCurrentBarCapabilities()
+          && Object.prototype.hasOwnProperty.call(firstPartyServices, requestedId)
       },
       _barEntryShellLookup: function(ownerId, moduleName) {
         return hasCurrentBarCapabilities()
