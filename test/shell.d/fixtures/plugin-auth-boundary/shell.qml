@@ -39,16 +39,11 @@ ShellRoot {
       pluginId: caller,
       idleConfig: { screensaver: 60, lock: 120 },
       _serviceLookup: function(requestedId) {
-        return requestedId === caller ? root.ownService : null
-      },
-      _serviceAllowed: function(requestedId) {
-        return requestedId === caller || requestedId === "example.source"
+        if (requestedId === caller) return root.ownService
+        return requestedId === "example.source" ? null : undefined
       },
       _firstPartyServiceLookup: function(requestedId) {
-        return ({})[requestedId] || null
-      },
-      _firstPartyServiceAllowed: function(requestedId) {
-        return requestedId === "example.source"
+        return requestedId === "example.source" ? null : undefined
       },
       _summon: function(requestedId) {
         if (requestedId !== caller) return false

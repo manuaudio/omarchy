@@ -18,9 +18,7 @@ QtObject {
   property var idleConfig: ({})
 
   property var _serviceLookup: null
-  property var _serviceAllowed: null
   property var _firstPartyServiceLookup: null
-  property var _firstPartyServiceAllowed: null
   property var _barEntryShellLookup: null
   property var _summon: null
   property var _hide: null
@@ -42,26 +40,23 @@ QtObject {
 
   function serviceFor(id) {
     var requested = String(id || "")
-    var allowed = _serviceAllowed ? _serviceAllowed(requested) : requested === pluginId
-    var service = allowed && _serviceLookup ? _serviceLookup(requested) : null
-    if (requested && !allowed)
+    var service = _serviceLookup ? _serviceLookup(requested) : undefined
+    if (requested && service === undefined)
       warnDenied("serviceFor", requested, "Plugins can only look up their own service; "
         + "bar widgets use firstPartyServiceFor() for omarchy.idle, omarchy.media, "
         + "omarchy.nightlight and omarchy.notifications.")
-    return service
+    return service === undefined ? null : service
   }
 
   // Only full-bar facades receive narrow proxies for the specific
   // non-authentication services used by the built-in bar widgets.
   function firstPartyServiceFor(id) {
     var requested = String(id || "")
-    var allowed = _firstPartyServiceAllowed
-      ? _firstPartyServiceAllowed(requested) : requested === pluginId
-    var service = allowed && _firstPartyServiceLookup ? _firstPartyServiceLookup(requested) : null
-    if (requested && !allowed)
+    var service = _firstPartyServiceLookup ? _firstPartyServiceLookup(requested) : undefined
+    if (requested && service === undefined)
       warnDenied("firstPartyServiceFor", requested, "Only bar widgets can reach "
         + "omarchy.idle, omarchy.media, omarchy.nightlight and omarchy.notifications.")
-    return service
+    return service === undefined ? null : service
   }
 
   function pluginShellForBarEntry(ownerId, moduleName) {
