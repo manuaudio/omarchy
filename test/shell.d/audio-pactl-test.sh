@@ -39,6 +39,7 @@ Sink Input #42
 	Properties:
 		application.name = "Firefox"
 		node.name = "Firefox"
+		object.id = "88"
 OUT
     ;;
   "-f json list sinks")
@@ -173,6 +174,32 @@ actual=$(LC_ALL=de_DE.UTF-8 omarchy-audio-sink-availability)
 [[ $actual == $'alsa_output.pci-0000_00_1f.3.analog-stereo\t0' ]] || fail 'sink availability reports an empty headphone jack unavailable' "$actual"
 grep -qx 'C pactl list sinks' "$CALLS" || fail 'sink availability reads pactl in the C locale whatever the caller'"'"'s' "$(calls)"
 pass 'sink availability reports an empty headphone jack unavailable, in the C locale'
+
+# --- omarchy-audio-stream-output ---
+
+# The panel knows a stream by its node id and moves it by its sink input,
+# which PipeWire numbers apart.
+cat >"$SINKS" <<'OUT'
+Sink #10
+	Name: alsa_output.pci-0000_00_1f.3.hdmi-stereo
+	Description: Built-in Audio Digital Stereo (HDMI)
+OUT
+: >"$CALLS"
+actual=$(LC_ALL=de_DE.UTF-8 omarchy-audio-stream-output)
+[[ $actual == $'88\t42\talsa_output.pci-0000_00_1f.3.hdmi-stereo\tBuilt-in Audio Digital Stereo (HDMI)' ]] ||
+  fail 'stream output lists each app by node id, sink input and sink' "$actual"
+[[ $(calls) == $'C pactl list sinks\nC pactl list sink-inputs' ]] || fail 'stream output reads pactl in the C locale' "$(calls)"
+pass 'stream output lists each app by node id, sink input and sink, in the C locale'
+
+: >"$CALLS"
+omarchy-audio-stream-output move 42 alsa_output.headphones
+[[ $(calls) == 'unset pactl move-sink-input 42 alsa_output.headphones' ]] || fail 'stream output moves one app once' "$(calls)"
+pass 'stream output moves one app once'
+
+: >"$CALLS"
+if omarchy-audio-stream-output move 42 2>/dev/null; then fail 'stream output refuses a move without a sink'; fi
+[[ ! -s $CALLS ]] || fail 'stream output calls nothing without a sink' "$(calls)"
+pass 'stream output refuses a move without a sink'
 
 # --- omarchy-audio-input-set-default ---
 

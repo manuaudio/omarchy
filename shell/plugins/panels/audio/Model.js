@@ -273,6 +273,26 @@ function isUntypedSource(node, sourceAvailability) {
   return name !== "" && !!sourceAvailability && Object.prototype.hasOwnProperty.call(sourceAvailability, name)
 }
 
+// omarchy-audio-stream-output's listing, by the stream's node id: the sink
+// input pactl moves it by, and the sink it plays on.
+function parseStreamOutputs(raw) {
+  var next = {}
+  var lines = String(raw || "").split("\n")
+  for (var i = 0; i < lines.length; i++) {
+    var parts = lines[i].split("\t")
+    if (parts.length < 4 || !parts[0] || !parts[1]) continue
+    next[parts[0]] = { input: parts[1], sink: parts[2], description: parts[3] }
+  }
+  return next
+}
+
+// The output a stream row plays on, or null while the listing has not named it.
+function streamOutputFor(row, outputs) {
+  if (!row || !outputs) return null
+  var key = String(row.id)
+  return Object.prototype.hasOwnProperty.call(outputs, key) ? outputs[key] : null
+}
+
 if (typeof module !== "undefined") {
   module.exports = {
     isPlaybackStream: isPlaybackStream,
@@ -299,6 +319,8 @@ if (typeof module !== "undefined") {
     unmatchedMprisStreamLabel: unmatchedMprisStreamLabel,
     streamLabel: streamLabel,
     streamRepresentsPlayer: streamRepresentsPlayer,
-    isUntypedSource: isUntypedSource
+    isUntypedSource: isUntypedSource,
+    parseStreamOutputs: parseStreamOutputs,
+    streamOutputFor: streamOutputFor
   }
 }

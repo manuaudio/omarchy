@@ -1,0 +1,79 @@
+#!/bin/bash
+
+# omarchy:summary=List the output each app plays on for the audio panel, or move one app to another output
+# omarchy:group=audio
+# omarchy:args=[move <input> <sink>]
+# omarchy:examples=omarchy audio stream output | omarchy audio stream output move 89993 alsa_output.pci-0000_00_1f.3.hdmi-stereo
+
+# The listing prints one line per playing app: its PipeWire node id (the id the
+# panel knows the stream by), its sink input (the index pactl moves it by, which
+# PipeWire numbers apart from the node), and the name and description of the
+# sink it plays on. pactl translates its headers, so both listings are read in
+# the C locale.
+
+set -uo pipefail
+
+if [[ ${1:-} == "move" ]]; then
+  if [[ -z ${2:-} || -z ${3:-} ]]; then
+    echo "Usage: omarchy-audio-stream-output move <input> <sink>" >&2
+    exit 1
+  fi
+  pactl move-sink-input "$2" "$3"
+  exit
+fi
+
+if [[ -n ${1:-} ]]; then
+  echo "Usage: omarchy-audio-stream-output [move <input> <sink>]" >&2
+  exit 1
+fi
+
+{
+  LC_ALL=C pactl list sinks 2>/dev/null
+  LC_ALL=C pactl list sink-inputs 2>/dev/null
+} | awk '
+  function emit_input() {
+    if (input != "" && node != "" && sink in names) print node "\t" input "\t" names[sink] "\t" descriptions[sink]
+    input = ""
+  }
+
+  /^Sink #/ {
+    emit_input()
+    sink = substr($2, 2)
+    next
+  }
+
+  /^Sink Input #/ {
+    emit_input()
+    input = substr($3, 2)
+    node = ""
+    next
+  }
+
+  input == "" && /^[[:space:]]*Name:/ {
+    names[sink] = $2
+    next
+  }
+
+  input == "" && /^[[:space:]]*Description:/ {
+    description = $0
+    sub(/^[[:space:]]*Description: /, "", description)
+    descriptions[sink] = description
+    next
+  }
+
+  input != "" && /^[[:space:]]*Sink:/ {
+    sink = $2
+    next
+  }
+
+  input != "" && /object\.id = / {
+    node = $0
+    sub(/.*object\.id = "/, "", node)
+    sub(/"$/, "", node)
+    next
+  }
+
+  END {
+    emit_input()
+  }
+'

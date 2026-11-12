@@ -375,6 +375,7 @@ Panel {
       cursorActive = false
       Qt.callLater(resetScroll)
     } else {
+      closeOutputMenu()
       clearDisplayAudioModels()
     }
   }
@@ -406,6 +407,7 @@ Panel {
     displayAudioSources = rowSnapshot(audioSources)
     displayAudioStreams = rowSnapshot(audioStreams)
     clampCursor()
+    if (displayAudioStreams.length > 0 && !streamOutputsProc.running) streamOutputsProc.running = true
   }
 
   function scheduleDisplayAudioModelRefresh() {
@@ -577,6 +579,86 @@ Panel {
     sinkAvailabilityLoaded = true
   }
 
+  // The output each app plays on, by its node id (omarchy-audio-stream-output),
+  // and the output menu: the stream it is for, where it opened within the
+  // panel, its choices and the keyboard's row in it.
+  property var streamOutputs: ({})
+  property var outputMenuStream: null
+  property var outputMenuChoices: []
+  property int outputMenuIndex: 0
+  property real outputMenuX: 0
+  property real outputMenuY: 0
+  property real outputMenuWidth: 0
+
+  function streamOutputFor(row) {
+    return Model.streamOutputFor(row, streamOutputs)
+  }
+
+  // The output's name as the panel's output list shows it, or PipeWire's
+  // description for one the list leaves out.
+  function streamOutputLabel(output) {
+    if (!output) return ""
+    for (var i = 0; i < audioSinks.length; i++)
+      if (String(audioSinks[i].name) === output.sink) return nodeLabel(audioSinks[i])
+    return friendlyDeviceLabel(output.description || output.sink)
+  }
+
+  // Opens under `item`, as wide as it, in panel coordinates; the choices are
+  // the panel's own output list.
+  function openOutputMenu(row, item) {
+    var output = streamOutputFor(row)
+    var content = panel.loadedContent
+    if (!output || !item || !content || displayAudioSinks.length < 2) return
+    var choices = []
+    var active = 0
+    for (var i = 0; i < displayAudioSinks.length; i++) {
+      var sink = nodeFor(displayAudioSinks[i])
+      if (!sink) continue
+      if (String(sink.name) === output.sink) active = choices.length
+      choices.push({ name: String(sink.name), label: nodeLabel(sink) })
+    }
+    var spot = item.mapToItem(content, 0, item.height)
+    outputMenuX = spot.x
+    outputMenuY = spot.y
+    outputMenuWidth = item.width
+    outputMenuChoices = choices
+    outputMenuIndex = active
+    outputMenuStream = row
+  }
+
+  function closeOutputMenu() {
+    outputMenuStream = null
+  }
+
+  // The row names the new output at once; the listing is read again to
+  // confirm it.
+  function moveStream(row, sinkName) {
+    closeOutputMenu()
+    var output = streamOutputFor(row)
+    if (!output || output.sink === sinkName) return
+    Quickshell.execDetached(["omarchy-audio-stream-output", "move", output.input, sinkName])
+    output.sink = sinkName
+    output.description = ""
+    streamOutputs = Object.assign({}, streamOutputs)
+    streamOutputsRefreshTimer.restart()
+  }
+
+  function applyOutputMenu() {
+    if (outputMenuIndex >= 0 && outputMenuIndex < outputMenuChoices.length)
+      moveStream(outputMenuStream, outputMenuChoices[outputMenuIndex].name)
+  }
+
+  // o: the output menu of the stream under the cursor.
+  function openOutputMenuForCursor() {
+    if (!cursorActive || focusSection !== "streams" || selectedIndex < 0 || selectedIndex >= displayAudioStreams.length) return
+    var row = displayAudioStreams[selectedIndex]
+    var picker = outputPickers[row.id]
+    if (picker) openOutputMenu(row, picker.anchor)
+  }
+
+  // The visible output pickers, by stream node id, for the keyboard.
+  property var outputPickers: ({})
+
   function friendlyDeviceLabel(text) {
     return Model.friendlyDeviceLabel(text)
   }
@@ -687,6 +769,21 @@ Panel {
   }
 
   Process {
+    id: streamOutputsProc
+    command: ["omarchy-audio-stream-output"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.streamOutputs = Model.parseStreamOutputs(text)
+    }
+  }
+
+  Timer {
+    id: streamOutputsRefreshTimer
+    interval: 1000
+    onTriggered: if (!streamOutputsProc.running) streamOutputsProc.running = true
+  }
+
+  Process {
     id: volumeSinkProc
     command: ["omarchy-audio-output-sink"]
     stdout: StdioCollector {
@@ -711,6 +808,7 @@ Panel {
     onTriggered: {
       if (!sinkAvailabilityProc.running) sinkAvailabilityProc.running = true
       if (!sourceAvailabilityProc.running) sourceAvailabilityProc.running = true
+      if (!streamOutputsProc.running) streamOutputsProc.running = true
     }
   }
 
@@ -769,14 +867,27 @@ Panel {
       implicitHeight: panelColumn.implicitHeight
       anchors.fill: parent
       onMoveRequested: function(dx, dy) {
+        // An open output menu takes j/k.
+        if (root.outputMenuStream) {
+          if (dy !== 0) root.outputMenuIndex = Math.max(0, Math.min(root.outputMenuChoices.length - 1, root.outputMenuIndex + dy))
+          return
+        }
         if (!root.cursorActive) { root.cursorActive = true; return }
         if (dy !== 0) root.moveCursor(dy)
         else if (dx !== 0) root.adjustVolume(dx * 0.05)
       }
-      onActivateRequested: if (root.cursorActive) root.activateCursor()
-      onCloseRequested: root.close()
+      onActivateRequested: {
+        if (root.outputMenuStream) root.applyOutputMenu()
+        else if (root.cursorActive) root.activateCursor()
+      }
+      // Esc closes the output menu first, then the panel.
+      onCloseRequested: {
+        if (root.outputMenuStream) root.closeOutputMenu()
+        else root.close()
+      }
       onTabRequested: function(direction) { root.switchPanel(direction) }
       onTextKey: function(t) {
+        if ((t === "o" || t === "O") && !root.outputMenuStream) root.openOutputMenuForCursor()
         // 'm' mutes whatever the cursor is on: focused section's slider
         // for output/input, the focused stream for streams.
         if (t === "m" || t === "M") {
@@ -1110,8 +1221,57 @@ Panel {
                 required property int index
                 width: panelColumn.width
                 node: root.nodeFor(modelData)
+                row: modelData
                 rowIndex: index
               }
+            }
+          }
+        }
+      }
+
+      // The output menu sits over the scrolling content, like the monitor
+      // panel's rotate menu, so the panel's edge doesn't clip it near the
+      // bottom. A click anywhere else closes it.
+      MouseArea {
+        anchors.fill: parent
+        visible: !!root.outputMenuStream
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onPressed: root.closeOutputMenu()
+      }
+
+      BorderSurface {
+        id: outputMenu
+        visible: !!root.outputMenuStream
+        width: root.outputMenuWidth
+        height: outputMenuColumn.implicitHeight + padding * 2
+        x: Math.max(0, Math.min(root.outputMenuX, parent.width - width))
+        y: Math.max(0, Math.min(root.outputMenuY, parent.height - height))
+        radius: Style.cornerRadius
+        color: Commons.Color.popups.background
+        borderSpec: Border.surfaceSpec("popups", "border", Commons.Color.popups.border, Style.normalBorderWidth)
+        padding: Style.spacing.sm
+
+        Column {
+          id: outputMenuColumn
+          x: outputMenu.contentLeftInset
+          y: outputMenu.contentTopInset
+          width: outputMenu.width - outputMenu.contentLeftInset - outputMenu.contentRightInset
+
+          Repeater {
+            model: root.outputMenuStream ? root.outputMenuChoices : []
+
+            delegate: PopupMenuRow {
+              required property var modelData
+              required property int index
+
+              readonly property var output: root.streamOutputFor(root.outputMenuStream)
+
+              text: modelData.label
+              checked: !!output && output.sink === modelData.name
+              // Hover and the keyboard share one lit row.
+              highlighted: root.outputMenuIndex === index
+              HoverHandler { onHoveredChanged: if (hovered) root.outputMenuIndex = index }
+              onTriggered: root.moveStream(root.outputMenuStream, modelData.name)
             }
           }
         }
@@ -1120,6 +1280,53 @@ Panel {
   }
 
   // ---- Reusable inline components ----
+
+  // The output an app plays on, under its name: the output's name and a
+  // chevron. A click (or o on the stream) opens the menu of the others. With
+  // one output there is nothing to choose and no row.
+  component OutputPicker: Item {
+    id: outputPicker
+    required property var row
+
+    readonly property var output: root.streamOutputFor(row)
+    readonly property alias anchor: outputText
+
+    visible: !!output && root.displayAudioSinks.length > 1
+    implicitHeight: outputText.implicitHeight
+
+    onVisibleChanged: register()
+    Component.onCompleted: register()
+    Component.onDestruction: if (row && root.outputPickers[row.id] === outputPicker) delete root.outputPickers[row.id]
+
+    function register() {
+      if (!row) return
+      if (visible) root.outputPickers[row.id] = outputPicker
+      else if (root.outputPickers[row.id] === outputPicker) delete root.outputPickers[row.id]
+    }
+
+    Text {
+      id: outputText
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.verticalCenter: parent.verticalCenter
+      // Lined up under the app's name, past its mute glyph.
+      anchors.leftMargin: Style.space(22) + Style.space(8)
+      textFormat: Text.PlainText
+      text: root.streamOutputLabel(outputPicker.output) + "  󰅀"
+      color: outputMouse.containsMouse ? root.bar.foreground : Qt.darker(root.bar.foreground, 1.4)
+      font.family: root.bar.fontFamily
+      font.pixelSize: Style.font.caption
+      elide: Text.ElideMiddle
+    }
+
+    MouseArea {
+      id: outputMouse
+      anchors.fill: parent
+      hoverEnabled: true
+      cursorShape: Qt.PointingHandCursor
+      onClicked: root.openOutputMenu(outputPicker.row, outputText)
+    }
+  }
 
   // Output device row — cursor target inside the "output" section. Mouse
   // hover updates the panel cursor at the root; visuals come entirely
@@ -1252,6 +1459,7 @@ Panel {
   component StreamRow: CursorSurface {
     id: streamRow
     required property var node
+    required property var row
     required property int rowIndex
 
     readonly property real streamVolume: node && node.audio ? node.audio.volume : 0
@@ -1326,6 +1534,11 @@ Panel {
           anchors.verticalCenter: parent.verticalCenter
           opacity: streamRow.streamMuted ? 0.5 : 1.0
         }
+      }
+
+      OutputPicker {
+        width: parent.width
+        row: streamRow.row
       }
 
       PanelSlider {
